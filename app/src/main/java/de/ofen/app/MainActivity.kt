@@ -44,7 +44,19 @@ class MainActivity : Activity() {
         web.settings.domStorageEnabled = true
         web.settings.allowFileAccess = true
         web.webViewClient = WebViewClient()
-        web.webChromeClient = WebChromeClient() // für confirm()-Dialoge
+        // Eigene Dialoge ohne Überschrift „Die Seite … meldet“
+        web.webChromeClient = object : WebChromeClient() {
+            private fun dlg() = android.app.AlertDialog.Builder(this@MainActivity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            override fun onJsAlert(v: WebView?, url: String?, msg: String?, r: android.webkit.JsResult): Boolean {
+                dlg().setMessage(msg).setPositiveButton("OK") { _, _ -> r.confirm() }
+                    .setOnCancelListener { r.confirm() }.show(); return true
+            }
+            override fun onJsConfirm(v: WebView?, url: String?, msg: String?, r: android.webkit.JsResult): Boolean {
+                dlg().setMessage(msg).setPositiveButton("OK") { _, _ -> r.confirm() }
+                    .setNegativeButton("Abbrechen") { _, _ -> r.cancel() }
+                    .setOnCancelListener { r.cancel() }.show(); return true
+            }
+        }
         web.addJavascriptInterface(Bridge(), "Ofen")
         web.setBackgroundColor(0)
         setContentView(web)
