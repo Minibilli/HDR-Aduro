@@ -564,8 +564,8 @@ function render(s){
  const al=ALARM[String(s.state)];
  const hal=!!s.halted;
  $('hero').dataset.mode=hal?'halt':al?'alarm':w?(s.wood_warn?'low':'wood'):(running?'run':'off');
- $('state').textContent=hal?'Ausgeschaltet'+(running?' · Ofen stoppt …':al?' · '+s.state_text:''):(s.early&&s.early.stopped)?'Holzbetrieb (App)':s.state_text;
- $('substate').textContent=hal?'Alle Automatiken der App sind pausiert – nichts startet von selbst, bis du „Starten“ drückst.'+(w?' Holz brennt noch.':''):al?al:(s.early&&s.early.msg)?s.early.msg:(s.substate_text&&s.substate_text!=='normal'?s.substate_text:'');
+ $('state').textContent=hal?'Ausgeschaltet'+(s.halted_ext?' (am Ofen)':'')+(running?' · Ofen stoppt …':al?' · '+s.state_text:''):(s.early&&s.early.stopped)?'Holzbetrieb (App)':s.state_text;
+ $('substate').textContent=hal?(s.halted_ext?'Am Ofen gestoppt – alle Automatiken der App sind pausiert, bis du „Starten“ drückst oder den Ofen am Gerät startest.':'Alle Automatiken der App sind pausiert – nichts startet von selbst, bis du „Starten“ drückst.')+(w?' Holz brennt noch.':''):al?al:(s.early&&s.early.msg)?s.early.msg:(s.substate_text&&s.substate_text!=='normal'?s.substate_text:'');
  if(w){$('bigV').textContent=num(s.smoke_temp);$('bigL').textContent='Rauchgas · Holzbetrieb';
   $('m1').textContent=num(s.room_temp,1)+' °C';$('m1l').textContent='Raum';$('m2').textContent=num(s.wood_min)+' °C';$('m2l').textContent='Warnung unter';
   $('gauge').hidden=false;$('gFill').style.width=Math.max(3,Math.min(100,(+s.smoke_temp||0)/(2*(+s.wood_min||150))*100))+'%';

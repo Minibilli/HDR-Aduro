@@ -83,7 +83,11 @@ object Stove {
 
     var lastSet = JSONObject()
 
+    /** Zeitpunkt des letzten Stoppbefehls der App – damit ein Stopp am Ofen davon unterschieden werden kann */
+    @Volatile private var appStopAt = 0L
+
     fun set(path: String, value: String) {
+        if (path == "misc.stop") appStopAt = System.currentTimeMillis()
         val r = call(Nbe.FN_SET, "$path=$value")
         lastSet = JSONObject().put("status", r.status).put("payload", r.payload.take(120))
         if (r.status != 0) throw StoveError("Ofen hat '$path = $value' abgelehnt (Status ${r.status})")
@@ -153,6 +157,7 @@ object Stove {
         s.put("fixed_power", runCatching { getKv(Nbe.FN_SETTINGS, "regulation.fixed_power")["fixed_power"] }.getOrNull() ?: JSONObject.NULL)
         s.put("target_temp", runCatching { getKv(Nbe.FN_SETTINGS, "boiler.temp")["temp"] }.getOrNull() ?: op["boiler_ref"] ?: JSONObject.NULL)
         val st = op["state"] ?: ""
+        val prevState = lastState
         stateChanged(st, op["smoke_temp"], op["boiler_temp"])
         val sub = op["substate"] ?: ""
         val mode = op["operation_mode"] ?: ""
@@ -168,6 +173,7 @@ object Stove {
         s.put("alarm_text", ALARM_TEXT[alarm] ?: alarm)
         s.put("raw", JSONObject(op))
         routeInfo().let { s.put("route", it.optString("route")).put("home_wifi", it.optBoolean("home_wifi")) }
+        try { externalStopCheck(prevState, st) } catch (e: Exception) { }
         haltCheck(s)
         try { hopperCheck(s) } catch (e: Exception) { }
         try {
@@ -534,10 +540,28 @@ object Stove {
 
     fun halted() = cfg().optBoolean("halted")
 
+    /** Stopp-Taste am Ofen (oder in der Aduro-App): Ofen meldet neu „Per Taste gestoppt“ (14), ohne dass die App
+     *  in den letzten 5 min einen Stoppbefehl gesendet hat -> wie „Ausschalten“ behandeln. Stopps des Ofens selbst
+     *  (Raumtemperatur erreicht -> „Warten“, Alarme) und das Ende des Holzbetriebs (Zustand 9) zählen nicht. */
+    private fun externalStopCheck(prev: String?, st: String) {
+        // 14 = „Per Taste gestoppt“ (23 = Timer zählt nicht); vorher heizend, „Warten“ oder „Fallschacht heiß“
+        if (prev == null || st != "14" || (prev !in HALT_RUNNING && prev !in setOf("0", "11")) || early.stopped) return
+        if (System.currentTimeMillis() - appStopAt < 5 * 60_000L) return
+        val c = cfg()
+        if (c.optBoolean("halted")) return
+        cancelEarly(); early.aboveSince = 0
+        c.put("halted", true).put("halted_at", System.currentTimeMillis()).put("halted_seen_off", true).put("halted_ext", true)
+        saveCfg(c)
+        if (man.active || man.deadline.isNotEmpty()) try { manualAllOff() } catch (e: Exception) { }
+        valveRelease()
+        Notifier.stateChange(ctx, "Ofen am Gerät ausgeschaltet",
+            "Die App behandelt das wie „Ausschalten“: Automatiken pausiert, nichts startet von selbst. Wieder an mit „Starten“ in der App oder am Ofen.")
+    }
+
     fun halt() {
         cancelEarly(); early.aboveSince = 0
         val c = cfg()
-        c.put("halted", true).put("halted_at", System.currentTimeMillis()).put("halted_seen_off", false); saveCfg(c)
+        c.put("halted", true).put("halted_at", System.currentTimeMillis()).put("halted_seen_off", false); c.remove("halted_ext"); saveCfg(c)
         if (man.active || man.deadline.isNotEmpty()) try { manualAllOff() } catch (e: Exception) { }
         valveRelease()
         haltLastStop = System.currentTimeMillis()
@@ -547,7 +571,7 @@ object Stove {
     fun resume() {
         cancelEarly()
         val c = cfg()
-        for (k in listOf("halted", "halted_at", "halted_seen_off")) c.remove(k)
+        for (k in listOf("halted", "halted_at", "halted_seen_off", "halted_ext")) c.remove(k)
         saveCfg(c)
         thermo.lastStart = System.currentTimeMillis()
         set("misc.start", "1")
@@ -563,7 +587,7 @@ object Stove {
             if (!c.optBoolean("halted_seen_off")) { c.put("halted_seen_off", true); saveCfg(c) }
         } else if (c.optBoolean("halted_seen_off") && st in HALT_RUNNING) {
             // nach dem Stopp von außen (Taste am Ofen / Aduro-App) wieder gestartet -> wie „Starten“
-            for (k in listOf("halted", "halted_at", "halted_seen_off")) c.remove(k)
+            for (k in listOf("halted", "halted_at", "halted_seen_off", "halted_ext")) c.remove(k)
             saveCfg(c)
             Notifier.stateChange(ctx, "Ofen wieder eingeschaltet", "Außerhalb der App gestartet – die Automatiken der App sind wieder aktiv.")
             s.put("halted", false); return false
@@ -572,7 +596,7 @@ object Stove {
             haltLastStop = now
             try { set("misc.stop", "1") } catch (e: Exception) { }
         }
-        s.put("halted", true).put("halted_at", c.optLong("halted_at"))
+        s.put("halted", true).put("halted_at", c.optLong("halted_at")).put("halted_ext", c.optBoolean("halted_ext"))
         return true
     }
 
