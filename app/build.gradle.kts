@@ -10,7 +10,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "de.ofen.app"
+        applicationId = "de.hdr.aduro"
         minSdk = 26
         targetSdk = 34
         versionCode = buildNo
