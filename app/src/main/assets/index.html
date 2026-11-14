@@ -206,6 +206,7 @@ body.noxp .xp{display:none!important}
 .scan svg{width:24px;height:24px}
 /* Funktionen starten/beenden */
 .fnbar{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:18px;padding:10px 14px;margin-bottom:12px;box-shadow:var(--shadow)}
+.apRow{margin:-4px 0 14px}.apRow span{font-size:12.5px}
 .fnbar b{font-size:15px}.fnbar span{font-size:12.5px;color:var(--go);font-weight:700}.fnbar .sw{margin-left:auto}
 .fnbar .sw input:checked+i{background:linear-gradient(135deg,#12c99b,#0fb5a6)}
 .offcard{background:var(--card);border-radius:24px;padding:24px 20px;box-shadow:var(--shadow);text-align:center}
@@ -265,6 +266,8 @@ body:not(.appoff) #offCard{display:none}
   <div class="card" id="pelletCard">
     <h2>Heizstufe</h2>
     <div class="seg" id="lv"><button data-l="1" onclick="power(1)">Niedrig</button><button data-l="2" onclick="power(2)">Mittel</button><button data-l="3" onclick="power(3)">Hoch</button></div>
+    <div class="tgl apRow"><div><b>Automatisch anpassen</b><span class="mute" id="apT">Stufe sinkt nahe am Ziel und steigt, wenn es kälter wird</span></div>
+      <label class="sw"><input type="checkbox" id="apOn"><i></i></label></div>
     <div class="seg ctl xp" id="ctlSeg" hidden><button data-c="ofen" onclick="setCtl('ofen')">Ofen-Fühler</button><button data-c="hm" onclick="setCtl('hm')">Homematic</button></div>
     <div class="step"><button onclick="bump(-1)">−</button><div class="v"><span id="tv">–</span><small id="tvL">Raum-Zieltemperatur</small></div><button onclick="bump(1)">+</button></div>
   </div>
@@ -577,6 +580,7 @@ function render(s){
  $('pelletCard').hidden=w;
  placeFan();
  const lv={'10':1,'50':2,'100':3}[String(s.fixed_power)];document.querySelectorAll('#lv button').forEach(b=>b.classList.toggle('sel',+b.dataset.l===lv));
+ apRender(s);
  ctlRender(s);
  renderRooms(s);renderParts(s);renderHop(s);
  $('upd').textContent='Aktualisiert '+new Date().toLocaleTimeString('de-DE');
@@ -592,7 +596,10 @@ function powerToggle(){const running=S&&(RUN.includes(S.state)||S.wood_mode);
  run(()=>api('start',{}),S&&S.halted?'Eingeschaltet – Ofen startet, Automatiken wieder aktiv':'Startbefehl gesendet')}
 function haltNow(){if(!confirm('Ofen ausschalten?\n\nDer Ofen stoppt und alle Automatiken der App pausieren (Raumsteuerung, Pellet-Neustart, Heizkörper-Steuerung), bis du wieder „Starten“ drückst.'))return;
  if(S){S.halted=true;render(S)}run(()=>api('stop',{}),'Ausgeschaltet – Automatiken pausiert')}
-function power(l){run(()=>api('power',{level:l}),'Heizstufe '+['','niedrig','mittel','hoch'][l])}
+function power(l){run(async()=>{const r=await api('power',{level:l});if(r&&r.auto_off){$('apOn').checked=false;CFG.auto_power=false;setTimeout(()=>toast('Heizstufe '+['','niedrig','mittel','hoch'][l]+' – Automatik aus'),50)}return r},'Heizstufe '+['','niedrig','mittel','hoch'][l])}
+const AP_DEF='Stufe sinkt nahe am Ziel und steigt, wenn es kälter wird';
+function apRender(s){const a=s&&s.autopower;const on=!!(a&&a.enabled);if(document.activeElement!==$('apOn'))$('apOn').checked=on;$('apT').textContent=on?(a.msg||'aktiv'):AP_DEF}
+$('apOn').addEventListener('change',()=>{const on=$('apOn').checked;api('config',{auto_power:on}).then(()=>{CFG.auto_power=on;$('apT').textContent=on?'aktiv – wird beim nächsten Abruf angepasst':AP_DEF;toast(on?'Heizstufe automatisch':'Heizstufe von Hand');if(on)refresh()}).catch(e=>{$('apOn').checked=!on;toast(e.message,true)})});
 function bump(d){if(ctlHm()){thBump(d*0.5);$('tv').textContent=t1($('thT').value)+' °C';if($('m1l').textContent==='Ziel · Homematic')$('m1').textContent=t1($('thT').value)+' °C';return}
  if(target===null)target=20;target=Math.max(5,Math.min(35,target+d));$('tv').textContent=target+' °C';
  clearTimeout(tTimer);tTimer=setTimeout(()=>{const t=target;run(()=>api('target',{temp:t}),'Zieltemperatur '+t+' °C').then(()=>tTimer=null)},1200)}
@@ -682,7 +689,7 @@ $('woodMin').addEventListener('input',()=>$('woodV').textContent=$('woodMin').va
 $('woodMin').addEventListener('change',()=>{api('config',{wood_min:$('woodMin').value}).then(()=>toast('Warnung unter '+$('woodMin').value+' °C')).catch(e=>toast(e.message,true))});
 $('reT').addEventListener('input',()=>$('reV').textContent=$('reT').value+' °C');
 $('reT').addEventListener('change',()=>{api('config',{early_restart_temp:$('reT').value}).then(()=>toast('Pelletstart unter '+$('reT').value+' °C')).catch(e=>toast(e.message,true))});
-async function loadCfg(first){try{const c=await api('config');CFG=c;setAppOn(c.app_on);setHm(c.hm);setXp(c.expert);$('xpOn').checked=!!c.expert;$('nsOn').checked=c.notify_state!==false;$('woodV').textContent=(c.wood_min||150)+' °C';$('reT').value=c.early_restart_temp||100;$('reV').textContent=(c.early_restart_temp||100)+' °C';$('reBox').hidden=!c.early_restart;$('esOn').checked=!!c.early_stop;$('esRe').checked=!!c.early_restart;$('esT').value=c.early_temp||240;$('esV').textContent=(c.early_temp||240)+' °C';esShow();$('ip').value=c.ip||'';$('serial').value=c.serial||'';$('woodMin').value=c.wood_min||150;
+async function loadCfg(first){try{const c=await api('config');CFG=c;setAppOn(c.app_on);setHm(c.hm);setXp(c.expert);$('xpOn').checked=!!c.expert;$('nsOn').checked=c.notify_state!==false;$('apOn').checked=!!c.auto_power;$('woodV').textContent=(c.wood_min||150)+' °C';$('reT').value=c.early_restart_temp||100;$('reV').textContent=(c.early_restart_temp||100)+' °C';$('reBox').hidden=!c.early_restart;$('esOn').checked=!!c.early_stop;$('esRe').checked=!!c.early_restart;$('esT').value=c.early_temp||240;$('esV').textContent=(c.early_temp||240)+' °C';esShow();$('ip').value=c.ip||'';$('serial').value=c.serial||'';$('woodMin').value=c.wood_min||150;
  vpnApp=c.vpn_app||vpnApp;$('vpnApp').value=vpnApp;if(first&&(!c.ip||!c.serial||!c.has_pin)){tab('set');openPage('conn')}}catch(e){}}
 async function saveCfg(){try{await api('config',{ip:$('ip').value,serial:$('serial').value,pin:$('pin').value,vpn_app:$('vpnApp').value});
  vpnApp=$('vpnApp').value;$('pin').value='';toast('Gespeichert');refresh()}catch(e){toast(e.message,true)}}

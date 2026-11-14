@@ -181,6 +181,9 @@ object Stove {
         } catch (e: Exception) {
             s.put("thermo", JSONObject().put("enabled", true).put("msg", "Fehler: ${e.message}"))
         }
+        try { autoPowerCheck(s) } catch (e: Exception) {
+            s.put("autopower", JSONObject().put("enabled", true).put("msg", "Fehler: ${e.message}"))
+        }
         try {
             valveCheck(s)
         } catch (e: Exception) {
@@ -463,6 +466,63 @@ object Stove {
             st == "0" -> { thermo.waitStartSent = 0; info.put("msg", "Ofen wartet – Raum im Zielbereich") }
             else -> info.put("msg", "wartet – Ofen meldet „${s.optString("state_text")}“")
         }
+    }
+
+    // ------------------------------------------------------------------ Automatische Heizstufe
+    // Je näher die Raumtemperatur am Ziel ist, desto kleiner die Heizstufe; sinkt sie wieder, geht die Stufe hoch.
+    // Abstand zum Ziel: ab 1,5 °C darunter Hoch, ab 0,5 °C Mittel, darüber Niedrig. 0,2 °C Hysterese
+    // und mindestens 10 min zwischen zwei Wechseln, damit die Stufe nicht ständig springt.
+    private const val AP_HIGH = 1.5
+    private const val AP_MID = 0.5
+    private const val AP_HYST = 0.2
+    private const val AP_MIN_GAP = 10 * 60_000L
+    private val AP_PCT = mapOf(1 to "10", 2 to "50", 3 to "100")
+    private val AP_NAME = mapOf(1 to "Niedrig", 2 to "Mittel", 3 to "Hoch")
+    @Volatile private var apLastSet = 0L
+
+    fun autoPowerOn() = cfg().optBoolean("auto_power")
+
+    private fun autoPowerCheck(s: JSONObject) {
+        val c = cfg()
+        val info = JSONObject().put("enabled", c.optBoolean("auto_power"))
+        s.put("autopower", info)
+        if (!c.optBoolean("auto_power")) return
+        if (c.optBoolean("halted")) { info.put("msg", "pausiert – Ofen ausgeschaltet"); return }
+        val st = s.optString("state")
+        if (st == "9" || man.wood) { info.put("msg", "pausiert (Holzbetrieb)"); return }
+        if (man.active) { info.put("msg", "pausiert (Handbetrieb)"); return }
+        // Welche Temperatur zählt: Homematic-Raum (wenn die Raumsteuerung aktiv ist) oder Ofen-Fühler
+        val th = s.optJSONObject("thermo")
+        val hm = c.optBoolean("hm_ctrl") && c.optBoolean("expert") && th != null && th.has("target") &&
+            th.opt("temp") is Number && Hmip.ageSeconds() <= 15 * 60
+        val t = if (hm) th!!.optDouble("temp") else s.optString("room_temp").toDoubleOrNull()
+        val target = if (hm) th!!.optDouble("target") else s.optString("target_temp").toDoubleOrNull()
+        if (t == null || target == null || t.isNaN() || target.isNaN()) { info.put("msg", "keine Temperatur"); return }
+        val cur = mapOf("10" to 1, "50" to 2, "100" to 3)[s.optString("fixed_power").substringBefore('.')]
+        val d = target - t
+        // gewünschte Stufe mit Hysterese um die aktuelle herum
+        val h = AP_HYST
+        val want = when (cur) {
+            3 -> if (d < AP_HIGH - h) (if (d < AP_MID - h) 1 else 2) else 3
+            2 -> if (d >= AP_HIGH + h) 3 else if (d < AP_MID - h) 1 else 2
+            1 -> if (d >= AP_MID + h) (if (d >= AP_HIGH + h) 3 else 2) else 1
+            else -> if (d >= AP_HIGH) 3 else if (d >= AP_MID) 2 else 1
+        }
+        info.put("level", cur ?: JSONObject.NULL).put("want", want)
+        val src = if (hm) "Raum" else "Ofen-Fühler"
+        val diff = "%.1f".format(java.util.Locale.GERMANY, kotlin.math.abs(d))
+        val where = if (d > 0) "$diff °C unter Ziel" else "$diff °C über Ziel"
+        if (st !in PELLET_RUN) { info.put("msg", "aktiv, sobald der Ofen heizt"); return }
+        if (cur == want) { info.put("msg", "${AP_NAME[want]} – $src $where"); return }
+        val now = System.currentTimeMillis()
+        if (cur != null && now - apLastSet < AP_MIN_GAP) {
+            info.put("msg", "wechselt um ${hhmm(apLastSet + AP_MIN_GAP)} auf ${AP_NAME[want]} – $src $where"); return
+        }
+        set("regulation.fixed_power", AP_PCT.getValue(want)); apLastSet = now
+        s.put("fixed_power", AP_PCT.getValue(want)); info.put("level", want)
+        info.put("msg", "auf ${AP_NAME[want]} gestellt – $src $where")
+        if (c.optBoolean("notify_state", true) && cur != null)
+            try { Notifier.stateChange(ctx, "Heizstufe ${AP_NAME[want]}", "$src $where") } catch (e: Exception) { }
     }
 
     // ------------------------------------------------------------------ Hauptschalter (Ausschalten / Starten)

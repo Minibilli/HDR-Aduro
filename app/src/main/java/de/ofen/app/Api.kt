@@ -40,6 +40,7 @@ object Api {
                 .put("early_temp", c.optInt("early_temp", 240))
                 .put("early_restart_temp", c.optInt("early_restart_temp", 100))
                 .put("notify_state", c.optBoolean("notify_state", true))
+                .put("auto_power", c.optBoolean("auto_power"))
                 .put("expert", c.optBoolean("expert")).put("expert_ver", Stove.EXPERT_TEXT_VERSION)
                 .put("hm", Hmip.connected()))
         }
@@ -92,6 +93,7 @@ object Api {
                 if (b.optString("vpn_app") in VPN_APPS) c.put("vpn_app", b.optString("vpn_app"))
                 if (b.has("early_restart_temp")) b.optString("early_restart_temp").toDoubleOrNull()?.let { c.put("early_restart_temp", it.toInt().coerceIn(50, 200)) }
                 if (b.has("notify_state")) c.put("notify_state", b.optBoolean("notify_state"))
+                if (b.has("auto_power")) c.put("auto_power", b.optBoolean("auto_power"))
                 if (b.has("hm_ctrl")) {
                     if (c.optBoolean("hm_ctrl") && !b.optBoolean("hm_ctrl")) Stove.restoreBoilerTarget(c)
                     c.put("hm_ctrl", b.optBoolean("hm_ctrl"))
@@ -111,7 +113,11 @@ object Api {
             "power" -> {
                 val lvl = mapOf("1" to "10", "2" to "50", "3" to "100")[b.optString("level")]
                     ?: return err("Heizstufe muss 1, 2 oder 3 sein")
-                Stove.set("regulation.fixed_power", lvl); return ok()
+                Stove.set("regulation.fixed_power", lvl)
+                // Stufe von Hand gewählt -> Automatik aus, sonst würde sie gleich wieder umgestellt
+                val c = Stove.cfg(); val wasAuto = c.optBoolean("auto_power")
+                if (wasAuto) { c.put("auto_power", false); Stove.saveCfg(c) }
+                return ok(JSONObject().put("auto_off", wasAuto))
             }
             "target" -> {
                 val t = b.optString("temp").toDoubleOrNull()?.toInt()
