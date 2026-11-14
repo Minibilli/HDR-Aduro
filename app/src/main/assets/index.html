@@ -1,0 +1,942 @@
+<!doctype html>
+<html lang="de"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f4f7fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b1020" media="(prefers-color-scheme: dark)">
+<title>HDR Aduro</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--soft:#eef2f8;--ink:#0f172a;--mute:#64748b;--line:#e3e9f2;
+--fire:#ff6b35;--fire2:#ff3d68;--fresh:#0fb5a6;--fresh2:#22c7e8;--go:#10b981;--bad:#e11d48;--warn:#f59e0b;
+--heroOff:linear-gradient(135deg,#e9f1fb,#dde9f7);--shadow:0 6px 24px rgba(15,23,42,.07)}
+@media (prefers-color-scheme:dark){:root{--bg:#0b1020;--card:#141a2e;--soft:#1c2340;--ink:#eef2ff;--mute:#94a3b8;--line:#252d4a;
+--heroOff:linear-gradient(135deg,#1a2342,#141c36);--shadow:0 6px 24px rgba(0,0,0,.35)}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,Roboto,sans-serif;
+padding:calc(14px + env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom))}
+header{display:flex;align-items:center;gap:10px;margin:2px 0 14px}
+.brand{display:flex;align-items:center;gap:7px;white-space:nowrap;font-size:19px;font-weight:800;letter-spacing:-.01em}
+.brand svg{width:26px;height:26px}
+.net{margin-left:auto;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;background:var(--card);box-shadow:var(--shadow);color:var(--mute)}
+.net svg{width:15px;height:15px;flex:0 0 15px}.net.ok{color:var(--go)}.net.bad{color:var(--bad)}
+.card{background:var(--card);border-radius:22px;padding:18px;margin-bottom:14px;box-shadow:var(--shadow)}
+h2{font-size:12.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);margin:0 0 12px;font-weight:700}
+.mute{color:var(--mute);font-size:13.5px}
+/* Hero */
+.hero{position:relative;border-radius:24px;padding:16px 16px 14px;margin-bottom:12px;background:var(--heroOff);color:var(--ink);box-shadow:var(--shadow);transition:background .4s}
+.hero[data-mode=run]{background:linear-gradient(135deg,#ff9a3c,#ff4f6d);color:#fff}
+.hero[data-mode=wood]{background:linear-gradient(135deg,#ffd166,#ff9f43);color:#3a1a05}
+.hero[data-mode=low]{background:linear-gradient(135deg,#ff5d73,#d6164a);color:#fff}
+.hero[data-mode=err]{background:var(--card)}
+.hero[data-mode=halt]{background:repeating-linear-gradient(135deg,#3b4558 0 14px,#344052 14px 28px);color:#fff}
+.hero[data-mode=halt] .chip{background:#fff;color:#1e293b}.hero[data-mode=halt] .chip i{animation:none}
+.hero[data-mode=halt] .sub{opacity:.95}
+.prow{display:flex;gap:10px;margin-bottom:14px}.prow .power{margin-bottom:0}
+.power.off{flex:0 0 38%;background:var(--card);color:var(--mute);box-shadow:var(--shadow)}.power.off[hidden]{display:none}
+.hero[data-mode=alarm]{background:linear-gradient(135deg,#ff5d73,#c8103e);color:#fff}
+.hero[data-mode=alarm] .chip i{animation:pulse 1s infinite}
+.hero[data-mode=alarm] .sub{opacity:1;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:5px 11px;border-radius:999px;background:color-mix(in srgb,currentColor 14%,transparent)}
+.chip i{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.85}
+.hero[data-mode=run] .chip i,.hero[data-mode=low] .chip i{animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.sub{font-size:13.5px;opacity:.8;margin-top:8px;min-height:1px}
+.big{display:flex;align-items:baseline;gap:6px;margin-top:8px}
+.big b{font-size:48px;font-weight:800;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.big span{font-size:22px;font-weight:600;opacity:.75}
+.blabel{font-size:13px;font-weight:600;opacity:.75;margin-top:2px}
+.meta{display:flex;gap:8px;margin-top:10px}
+.meta div{flex:1;border-radius:12px;padding:6px 10px;background:color-mix(in srgb,currentColor 9%,transparent)}
+.meta b{display:block;font-size:16px;font-variant-numeric:tabular-nums}.meta small{font-size:12px;opacity:.75}
+.gauge{position:relative;height:10px;border-radius:99px;margin-top:16px;background:color-mix(in srgb,currentColor 16%,transparent);overflow:visible}
+.gauge i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:currentColor;transition:width .6s}
+.gauge b{position:absolute;left:50%;top:-4px;bottom:-4px;width:3px;border-radius:2px;background:currentColor;opacity:.55}
+.gauge[hidden]{display:none}
+.vpnbox{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}.vpnbox p{margin:0 0 10px;font-size:14px}.vpnbox[hidden]{display:none}
+/* Buttons */
+button,a.btn{font:inherit;font-weight:700;border:0;border-radius:16px;padding:13px;cursor:pointer;color:var(--ink);background:var(--soft);text-decoration:none;text-align:center;display:block}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.power{width:100%;height:62px;font-size:18px;border-radius:20px;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:10px;color:#fff;background:linear-gradient(135deg,#12c99b,#0fb5a6);box-shadow:0 8px 22px rgba(16,185,129,.28)}
+.power.stop{background:var(--card);color:var(--bad);box-shadow:var(--shadow)}
+.power svg{width:22px;height:22px}.power:disabled{opacity:.5}
+.btn.fire,.fire{background:linear-gradient(135deg,#ff8a3d,#ff4f6d);color:#fff}
+.fresh{background:linear-gradient(135deg,var(--fresh),var(--fresh2));color:#fff}
+.seg{display:flex;background:var(--soft);border-radius:16px;padding:4px;gap:4px}
+.seg button{flex:1;background:transparent;padding:11px 6px;font-size:14.5px;color:var(--mute)}
+.seg button.sel{background:var(--card);color:var(--fire);box-shadow:0 2px 8px rgba(15,23,42,.08)}
+.seg.f button.sel{color:var(--fresh)}
+.step{display:flex;align-items:center;gap:12px;margin-top:16px}
+.step button{width:52px;height:52px;flex:0 0 52px;border-radius:50%;font-size:24px;padding:0}
+.step .v{flex:1;text-align:center;font-size:34px;font-weight:800;font-variant-numeric:tabular-nums}
+.step .v small{display:block;font-size:12px;font-weight:600;color:var(--mute)}
+/* Fan */
+.fanhead{display:flex;align-items:center;gap:14px}
+.fanico{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:var(--soft);color:var(--fresh)}
+.fanico svg{width:30px;height:30px}.fanico.on{background:linear-gradient(135deg,var(--fresh),var(--fresh2));color:#fff}
+.fanico.on svg{animation:spin 1.2s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.fanhead .t{margin-left:auto;font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--fresh)}
+.fanhead b{display:block;font-size:17px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}.chips button{flex:1 0 auto;padding:9px 10px;font-size:14px;border-radius:12px}
+.chips button.sel{background:color-mix(in srgb,var(--fresh) 16%,transparent);color:var(--fresh)}
+/* Lists */
+.out{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.out:last-child{border-bottom:0}.out .n{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:13px;font-weight:800;background:var(--soft);color:var(--mute)}
+.out .lbl{flex:1;font-weight:600}.out button{padding:8px 14px;font-size:13.5px;border-radius:12px;min-width:76px}
+.out button.run{background:linear-gradient(135deg,var(--fresh),var(--fresh2));color:#fff}
+.out input{flex:1}
+input,select{font:inherit;width:100%;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--ink)}
+label{display:block;font-size:13px;color:var(--mute);margin:12px 0 5px;font-weight:600}
+.warn{background:color-mix(in srgb,var(--warn) 14%,transparent);border-radius:14px;padding:11px 13px;font-size:13.5px;margin-bottom:12px}
+details summary{cursor:pointer;font-weight:700;list-style:none}details summary::after{content:" ›";color:var(--mute)}details[open] summary::after{content:" ⌄"}
+.set{display:grid;grid-template-columns:1fr 92px 56px;gap:6px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.set code{font-size:13px;overflow-wrap:anywhere}.set input{padding:7px}.set button{padding:8px;font-size:13px}
+.alert{background:linear-gradient(135deg,#ff5d73,#d6164a);color:#fff;border-radius:18px;padding:14px 16px;margin-bottom:14px;font-weight:700;display:flex;gap:10px;align-items:center;box-shadow:0 8px 22px rgba(225,29,72,.3)}
+.alert[hidden]{display:none}.alert svg{flex:0 0 24px;height:24px}
+.upd{text-align:center;margin:4px 0 0}
+.sep{height:1px;background:var(--line);margin:18px 0}
+.tgl{display:flex;gap:14px;align-items:center}.tgl>button{flex:0 0 auto;padding:10px 14px;font-size:14px}.tgl>button[hidden]{display:none}.tgl>div{flex:1}.tgl b{display:block;margin-bottom:2px}
+.sw{margin:0;position:relative;width:52px;height:30px;flex:0 0 52px}.sw input{opacity:0;width:0;height:0;position:absolute}
+.sw i{position:absolute;inset:0;border-radius:99px;background:var(--soft);transition:.2s}
+.sw i::after{content:"";position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);transition:.2s}
+.sw input:checked+i{background:linear-gradient(135deg,#ff8a3d,#ff4f6d)}.sw input:checked+i::after{transform:translateX(22px)}
+#esBox[hidden]{display:none}
+.slide{display:flex;align-items:center;gap:14px}.slide b{min-width:74px;text-align:right;font-size:22px;font-variant-numeric:tabular-nums;color:var(--fire)}
+input[type=range]{flex:1;padding:0;border:0;background:transparent;accent-color:var(--fire);height:32px}
+/* Tabs */
+nav{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));display:flex;background:color-mix(in srgb,var(--card) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:22px;padding:6px;box-shadow:0 10px 30px rgba(15,23,42,.16);z-index:5}
+nav button{flex:1;background:transparent;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;font-size:12px;color:var(--mute);border-radius:16px}
+nav button svg{width:24px;height:24px}
+nav button[hidden]{display:none}
+nav button.on{color:var(--fire);background:color-mix(in srgb,var(--fire) 10%,transparent)}
+section[hidden]{display:none}
+.modal{position:fixed;inset:0;background:rgba(5,10,25,.45);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;align-items:flex-end;z-index:20;padding:12px}
+.modal[hidden]{display:none}
+.sheet{width:100%;background:var(--card);border-radius:24px;padding:20px;box-shadow:0 -10px 40px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:6px;animation:up .2s ease-out;margin-bottom:env(safe-area-inset-bottom)}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.sheet>b{font-size:18px}.numrow{display:flex;align-items:center;gap:10px;margin:10px 0 2px}
+.numrow input{font-size:30px;font-weight:800;padding:10px 14px;text-align:center}.numrow span{font-size:20px;font-weight:700;color:var(--mute)}
+.numerr{color:var(--bad);font-size:13.5px;font-weight:600;min-height:18px}
+input[type=range].lp{outline:3px solid color-mix(in srgb,var(--fire) 35%,transparent);border-radius:99px}
+#thCard .step{margin-top:14px}#thCard .step .v{cursor:pointer}
+.homeTh{margin:0 0 14px;cursor:pointer}
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.rt{background:var(--card);border-radius:20px;padding:14px;box-shadow:var(--shadow);position:relative;min-width:0}
+.rt.ctrl{background:linear-gradient(135deg,#ff9a3c,#ff4f6d);color:#fff}.rt.ctrl .rs{color:rgba(255,255,255,.85)}
+.rt .rl{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:22px}
+.rt .rv{font-size:34px;font-weight:800;letter-spacing:-.02em;margin:6px 0 2px;font-variant-numeric:tabular-nums}.rt .rv small{font-size:15px;font-weight:600;opacity:.7}
+.rt .rs{font-size:12.5px;color:var(--mute);line-height:1.5}
+.rt .rw{position:absolute;right:12px;top:12px;width:18px;height:18px;color:var(--fresh)}.rt.ctrl .rw{color:#fff}
+.rt.wide{grid-column:1/-1}
+.thbig{display:flex;align-items:center;gap:12px}.thbig>div:first-child{flex:1;min-width:0}.thbig b{display:block;font-size:17px}
+.thbig .tp{font-size:34px;font-weight:800;color:var(--fire);font-variant-numeric:tabular-nums;text-align:right}.thbig .tp small{display:block;font-size:12.5px;font-weight:600;color:var(--mute)}
+.roomsFoot{align-items:center}.roomsFoot[hidden]{display:none}#thCard[hidden],#roomsEmpty[hidden],.homeTh[hidden]{display:none}
+.menu{padding:6px 6px}.mi{display:flex;align-items:center;gap:14px;padding:12px 10px;border-radius:16px;cursor:pointer}
+.mi+.mi{border-top:1px solid var(--line);border-radius:0}.mi:active{background:var(--soft)}
+.mi .mic{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;flex:0 0 40px;color:#fff}
+.mi .mic svg{width:22px;height:22px}.mi .mt{flex:1;min-width:0}.mi .mt b{display:block;font-size:16px}
+.mi .mt span{display:block;font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mi .chev{color:var(--mute);font-size:22px}
+[data-pg][hidden],.menu[hidden],#reBox[hidden]{display:none}
+.room{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.room:last-child{border-bottom:0}
+.room .ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:var(--soft);color:var(--mute);flex:0 0 36px}
+.room .ic svg{width:20px;height:20px}.room.ctrl .ic{background:color-mix(in srgb,var(--fire) 14%,transparent);color:var(--fire)}
+.room .nm{flex:1;min-width:0}.room .nm b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.room .nm span{font-size:12.5px;color:var(--mute)}
+.room .tp{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}.room .tp small{font-size:13px;color:var(--mute);font-weight:600}
+.thline{font-size:13.5px;font-weight:600;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--fire) 10%,transparent);color:var(--ink);margin-bottom:6px}
+.thline[hidden]{display:none}#roomsCard[hidden]{display:none}#hmOff[hidden],#hmOn[hidden],#thBox[hidden],#hmMsg[hidden]{display:none}
+.hmrow{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}.hmrow:last-child{border-bottom:0}
+.hmrow .nm{flex:1;min-width:0}.hmrow .nm b{display:block;font-size:15px}.hmrow .nm span{font-size:12.5px;color:var(--mute)}
+.gear{flex:0 0 40px;width:40px;height:40px;padding:0;border-radius:50%;display:grid;place-items:center;background:var(--card);box-shadow:var(--shadow);color:var(--mute)}
+.gear svg{width:22px;height:22px;transition:transform .35s}.gear.on{color:var(--fire)}.gear.on svg{transform:rotate(60deg)}
+.settitle{display:flex;align-items:center;gap:6px;font-size:22px;font-weight:800;margin:0 0 14px;cursor:pointer}.settitle svg{width:24px;height:24px;color:var(--mute)}
+@keyframes inL{from{transform:translateX(40px);opacity:0}}@keyframes inR{from{transform:translateX(-40px);opacity:0}}
+section.inL{animation:inL .22s ease-out}section.inR{animation:inR .22s ease-out}
+.dots{position:fixed;left:0;right:0;bottom:calc(88px + env(safe-area-inset-bottom));display:flex;justify-content:center;gap:6px;pointer-events:none;z-index:4}
+.dots i{width:6px;height:6px;border-radius:3px;background:var(--mute);opacity:.35;transition:.2s}.dots i.on{width:18px;opacity:.9;background:var(--fire)}
+body.inset .dots{display:none}
+/* Bauteile */
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.pt{background:var(--card);border-radius:20px;padding:14px;box-shadow:var(--shadow);min-width:0}
+.pt .pi{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:var(--soft);color:var(--mute);margin-bottom:10px}
+.pt .pi svg{width:24px;height:24px}
+.pt b{display:block;font-size:15px}.pt .ps{font-size:13px;font-weight:700;color:var(--mute);margin-top:2px}.pt .pw{font-size:12px;color:var(--mute);margin-top:4px;line-height:1.35}
+.pt.on .pi{background:linear-gradient(135deg,#ff8a3d,#ff4f6d);color:#fff}.pt.on .ps{color:var(--fire)}
+.pt.on.f .pi{background:linear-gradient(135deg,var(--fresh),var(--fresh2))}.pt.on.f .ps{color:var(--fresh)}
+.pt.on .pi svg.spin{animation:spin 1.2s linear infinite}
+.pt.half .pi{background:color-mix(in srgb,var(--fire) 16%,transparent);color:var(--fire)}.pt.half .ps{color:var(--fire)}
+.mrow{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:14.5px}.mrow:last-child{border-bottom:0}
+.mrow b{font-variant-numeric:tabular-nums}
+.raw{font:12.5px/1.5 ui-monospace,monospace;overflow-wrap:anywhere;color:var(--mute);margin-top:10px}
+.seg.ctl{margin-top:14px}.seg.ctl[hidden]{display:none}.seg.ctl button{padding:9px 6px;font-size:13.5px}
+#vlBox[hidden],#valveHome[hidden],#vpnHome[hidden]{display:none}
+.quit{width:100%;margin:4px 0 14px;background:var(--card);color:var(--bad);box-shadow:var(--shadow)}.quit[hidden]{display:none}
+/* Countdown Gebläse (Handbetrieb) oben rechts in der Statuskarte */
+.fanbadge{position:absolute;top:12px;right:12px;width:82px;height:82px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+ background:color-mix(in srgb,#0b1020 30%,transparent);color:#fff;box-shadow:0 6px 18px rgba(15,181,166,.35)}
+.fanbadge[hidden]{display:none}
+.fanbadge svg.ring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.fanbadge .rb{fill:none;stroke:rgba(255,255,255,.18);stroke-width:4}
+.fanbadge .rf{fill:none;stroke:url(#fanGrad);stroke-width:4.5;stroke-linecap:round;transition:stroke-dashoffset 1s linear}
+.fanbadge .in{position:relative;display:flex;flex-direction:column;align-items:center;line-height:1}
+.fanbadge .in svg{width:26px;height:26px;color:var(--fresh2);animation:spin 1.2s linear infinite}
+.fanbadge .in b{font-size:19px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}
+.fanbadge .in small{font-size:10.5px;font-weight:700;opacity:.8;margin-top:2px;letter-spacing:.02em}
+/* Pellet-Füllstand */
+.hop{background:var(--card);border-radius:20px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);cursor:pointer}
+.hop[hidden],#hopPanel[hidden]{display:none}
+.hop .hl{display:flex;align-items:baseline;gap:10px;margin-bottom:9px}.hop .hl b{font-size:15px}.hop .hl span{margin-left:auto;font-size:13.5px;color:var(--mute);font-weight:600;text-align:right}
+.hbar{position:relative;height:12px;border-radius:99px;background:var(--soft);overflow:hidden}
+.hbar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#d9a35b,#b7793a);transition:width .6s}
+.hop.low .hbar i{background:linear-gradient(90deg,#ff5d73,#d6164a)}.hop.low .hl span{color:var(--bad)}
+.hbar em{position:absolute;top:0;bottom:0;width:2px;background:var(--bad);opacity:.6}
+#hopPanel{margin-top:12px;cursor:default}#hopPanel .row{margin-top:8px}#hopPanel input{flex:1}
+/* Expertenmodus */
+body.noxp .xp{display:none!important}
+.xpbadge{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.04em;padding:2px 7px;border-radius:6px;background:color-mix(in srgb,var(--warn) 22%,transparent);color:var(--warn);vertical-align:middle;margin-left:6px}
+#xpModal{position:fixed;inset:0;z-index:20;background:rgba(5,8,18,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;padding:12px}
+#xpModal[hidden]{display:none}
+#xpModal .box{background:var(--card);color:var(--ink);border-radius:24px;max-width:560px;width:100%;max-height:92vh;overflow:auto;padding:20px 18px calc(18px + env(safe-area-inset-bottom));box-shadow:0 20px 60px rgba(0,0,0,.4)}
+#xpModal h3{margin:0 0 4px;font-size:20px}#xpModal h4{margin:16px 0 6px;font-size:15px}
+#xpModal p,#xpModal li{font-size:14px;line-height:1.45}#xpModal ul{padding-left:18px;margin:6px 0}
+#xpModal .ack{display:flex;gap:10px;align-items:flex-start;margin:12px 0 0;font-size:14px;font-weight:600;color:var(--ink)}
+#xpModal .ack input{width:22px;height:22px;flex:0 0 22px;margin-top:1px;accent-color:var(--fire)}
+#xpModal .row{margin-top:16px}
+/* Eingabefeld mit Scan-Knopf */
+.inscan{display:flex;gap:8px}.inscan input{flex:1;min-width:0}
+.scan{flex:0 0 48px;width:48px;padding:0;border-radius:14px;display:grid;place-items:center;background:var(--soft);color:var(--fire)}
+.scan svg{width:24px;height:24px}
+/* Funktionen starten/beenden */
+.fnbar{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:18px;padding:10px 14px;margin-bottom:12px;box-shadow:var(--shadow)}
+.fnbar b{font-size:15px}.fnbar span{font-size:12.5px;color:var(--go);font-weight:700}.fnbar .sw{margin-left:auto}
+.fnbar .sw input:checked+i{background:linear-gradient(135deg,#12c99b,#0fb5a6)}
+.offcard{background:var(--card);border-radius:24px;padding:24px 20px;box-shadow:var(--shadow);text-align:center}
+.offcard svg{width:56px;height:56px;color:var(--mute);margin-bottom:6px}.offcard h3{margin:0 0 8px;font-size:20px}
+.offcard p{color:var(--mute);font-size:14px;line-height:1.45;margin:0 0 18px}
+body.appoff nav,body.appoff #dots,body.appoff #t-ofen>:not(#offCard){display:none!important}
+.offcard .power svg{width:22px;height:22px;margin:0;color:inherit}
+body:not(.appoff) #offCard{display:none}
+#toast{position:fixed;left:16px;right:16px;bottom:calc(92px + env(safe-area-inset-bottom));padding:13px 15px;border-radius:16px;background:var(--ink);color:var(--bg);font-size:14px;font-weight:600;transform:translateY(20px);opacity:0;visibility:hidden;transition:.25s;z-index:6}
+#toast.show{transform:none;opacity:1;visibility:visible}#toast.err{background:var(--bad);color:#fff}
+</style></head><body>
+
+<header>
+  <div class="brand"><svg viewBox="0 0 24 24"><defs><linearGradient id="fl" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff4f6d"/><stop offset="1" stop-color="#ffb13d"/></linearGradient></defs><path fill="url(#fl)" d="M12 2c1 3.5 5.5 5.6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.6 1.3-4.3 2.6-5.6.3 1.7 1 2.8 2.2 3.3C10.9 7.7 11.4 4.6 12 2z"/></svg>HDR Aduro</div>
+  <span class="net" id="net"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5.5 12.2a10 10 0 0 1 13 0"/><path d="M9 15.8a5 5 0 0 1 6 0"/><circle cx="12" cy="19.5" r="1.2" fill="currentColor"/></svg><span id="netT">Verbinde …</span></span>
+  <button class="gear" id="gearBtn" onclick="tab(curTab==='set'?lastMain:'set')" aria-label="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+</header>
+<div class="alert" id="woodAlert" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5"/><circle cx="12" cy="18" r=".8" fill="currentColor"/></svg><span id="woodT"></span></div>
+
+<!-- ============ Tab: Ofen ============ -->
+<section id="t-ofen">
+  <div class="offcard" id="offCard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/></svg>
+    <h3>Funktionen sind aus</h3>
+    <p>Die App verbindet sich erst mit dem Ofen, wenn du startest. Dann laufen auch Überwachung, Warnungen und Automatiken – auch im Hintergrund.</p>
+    <button class="power" style="margin:0" onclick="fnStart()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/></svg>Funktionen starten</button>
+  </div>
+  <div class="fnbar" id="fnBar"><b>Funktionen</b><span>laufen</span><label class="sw"><input type="checkbox" id="fnOn" checked><i></i></label></div>
+  <div class="hero" id="hero" data-mode="err">
+    <span class="chip"><i></i><span id="state">Verbinde …</span></span>
+    <div class="fanbadge" id="fanBadge" hidden onclick="tab('fan')" title="Gebläse läuft von Hand">
+      <svg class="ring" viewBox="0 0 100 100"><defs><linearGradient id="fanGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22c7e8"/><stop offset="1" stop-color="#0fb5a6"/></linearGradient></defs>
+        <circle class="rb" cx="50" cy="50" r="45"/><circle class="rf" id="fanArc" cx="50" cy="50" r="45" stroke-dasharray="282.7" stroke-dashoffset="0"/></svg>
+      <div class="in"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm.9-1.9c.5-2.6 2.4-6.1 5.2-5 2.6 1 1.4 4.7-2.8 6.1-.9.3-1.6-.2-2.4-1.1zm1.9 3.8c2.6.5 6.1 2.4 5 5.2-1 2.6-4.7 1.4-6.1-2.8-.3-.9.2-1.6 1.1-2.4zm-3.7 1.9c-.5 2.6-2.4 6.1-5.2 5-2.6-1-1.4-4.7 2.8-6.1.9-.3 1.6.2 2.4 1.1zM9.2 11.1C6.6 10.6 3.1 8.7 4.2 5.9c1-2.6 4.7-1.4 6.1 2.8.3.9-.2 1.6-1.1 2.4z"/></svg>
+        <b id="fanBadgeT">–</b><small>Gebläse</small></div>
+    </div>
+    <div class="sub" id="substate"></div>
+    <div class="big"><b id="bigV">–</b><span>°C</span></div>
+    <div class="blabel" id="bigL">Raumtemperatur</div>
+    <div class="gauge" id="gauge" hidden><i id="gFill"></i><b></b></div>
+    <div class="meta"><div><b id="m1">–</b><small id="m1l">Ziel</small></div><div><b id="m2">–</b><small id="m2l">Rauchgas</small></div></div>
+    <div class="vpnbox" id="vpnBox" hidden><p id="vpnMsg"></p><a class="btn fire" id="vpnBtn" href="#">VPN öffnen</a></div>
+  </div>
+
+  <div class="prow"><button class="power" id="powerBtn" onclick="powerToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/></svg><span id="powerT">Starten</span></button>
+  <button class="power off" id="haltBtn" hidden onclick="haltNow()">Aus</button></div>
+
+  <div class="hop" id="hopHome" hidden>
+    <div onclick="hopToggle()"><div class="hl"><b>Pellets</b><span id="hopT">–</span></div>
+    <div class="hbar"><i id="hopFill"></i><em id="hopMark"></em></div></div>
+    <div id="hopPanel" hidden>
+      <div class="row"><button class="fire" id="hopFull" onclick="hopFill(null)">Voll</button><button onclick="hopFill(15,true)">+ 15 kg Sack</button></div>
+      <div class="row"><input id="hopKg" type="number" inputmode="decimal" placeholder="Inhalt jetzt in kg"><button style="flex:0 0 90px" onclick="hopFill(+$('hopKg').value)">Setzen</button></div>
+      <p class="mute" style="margin:8px 0 0">Der Ofen zählt ab dem eingetragenen Wert selbst herunter (Schnecke: <span id="hopAug">–</span> g / 6 min).</p>
+    </div>
+  </div>
+  <div class="card" id="pelletCard">
+    <h2>Heizstufe</h2>
+    <div class="seg" id="lv"><button data-l="1" onclick="power(1)">Niedrig</button><button data-l="2" onclick="power(2)">Mittel</button><button data-l="3" onclick="power(3)">Hoch</button></div>
+    <div class="seg ctl xp" id="ctlSeg" hidden><button data-c="ofen" onclick="setCtl('ofen')">Ofen-Fühler</button><button data-c="hm" onclick="setCtl('hm')">Homematic</button></div>
+    <div class="step"><button onclick="bump(-1)">−</button><div class="v"><span id="tv">–</span><small id="tvL">Raum-Zieltemperatur</small></div><button onclick="bump(1)">+</button></div>
+  </div>
+  <div id="homeFan"></div>
+  <div class="thline homeTh" id="thHome" hidden onclick="tab('rooms')"></div>
+  <div class="warn" id="vpnHome" hidden><b>Du bist im Heim-WLAN, aber das VPN ist noch an.</b> Die App spricht den Ofen dann über den Tunnel an statt direkt – das ist langsamer und störanfälliger. Am besten in WG Tunnel dein WLAN als vertrauenswürdig eintragen, dann geht das VPN zu Hause von selbst aus.
+    <a class="btn" id="vpnHomeBtn" href="#" style="margin-top:10px">VPN-App öffnen</a></div>
+  <div class="thline homeTh" id="valveHome" hidden onclick="tab('set');openPage('hm')"></div>
+  <p class="mute upd" id="upd"></p>
+</section>
+
+<!-- ============ Tab: Räume (Homematic) ============ -->
+<section id="t-rooms" hidden>
+  <div class="card" id="thCard" hidden>
+    <h2>Raumsteuerung</h2>
+    <div class="thbig"><div><b id="thRoomN">–</b><span id="thMsg" class="mute"></span></div><div class="tp"><span id="thTemp">–</span><small>Raum</small></div></div>
+    <div class="step"><button onclick="thBump(-0.5)">−</button><div class="v" onclick="numFor($('thT'),'Zieltemperatur Raumsteuerung')"><span id="thTarget">–</span><small>Zieltemperatur</small></div><button onclick="thBump(0.5)">+</button></div>
+  </div>
+  <div id="roomGrid" class="rgrid"></div>
+  <div class="card" id="roomsEmpty" hidden>
+    <h2>Räume</h2>
+    <p class="mute" id="roomsEmptyT" style="margin-top:0"></p>
+    <button class="fire" style="width:100%" onclick="tab('set');openPage('hm')">Homematic einrichten</button>
+  </div>
+  <div class="row roomsFoot" id="roomsFoot"><p class="mute" id="roomsAge" style="margin:0;flex:1;align-self:center"></p><button style="flex:0 0 auto;padding:10px 16px" onclick="roomsRefresh()">Aktualisieren</button></div>
+</section>
+
+<!-- ============ Tab: Gebläse ============ -->
+<section id="t-fan" hidden>
+  <div id="fanSlot">
+    <div class="card xp" id="fanCard">
+      <div class="fanhead"><div class="fanico" id="fanIco"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm.9-1.9c.5-2.6 2.4-6.1 5.2-5 2.6 1 1.4 4.7-2.8 6.1-.9.3-1.6-.2-2.4-1.1zm1.9 3.8c2.6.5 6.1 2.4 5 5.2-1 2.6-4.7 1.4-6.1-2.8-.3-.9.2-1.6 1.1-2.4zm-3.7 1.9c-.5 2.6-2.4 6.1-5.2 5-2.6-1-1.4-4.7 2.8-6.1.9-.3 1.6.2 2.4 1.1zM9.2 11.1C6.6 10.6 3.1 8.7 4.2 5.9c1-2.6 4.7-1.4 6.1 2.8.3.9-.2 1.6-1.1 2.4z"/></svg></div>
+        <div><b>Frischluftgebläse</b><span class="mute" id="fanSub">Aus</span></div><div class="t" id="fanT"></div></div>
+      <div id="fanCtl">
+        <div class="chips" id="fanChips"><button data-m="5">5 min</button><button data-m="15">15 min</button><button data-m="30">30 min</button><button data-m="60">60 min</button><button data-m="stop">bis Stopp</button></div>
+        <div class="row"><button class="fresh" onclick="fanStart()">Start</button><button onclick="fanStop()">Stopp</button></div>
+      </div>
+      <p class="mute" id="fanHint" hidden>Unter <b>Einstellungen → Ausgänge benennen</b> einen Ausgang „Frischluftgebläse“ nennen, dann erscheint hier die Steuerung.</p>
+    </div>
+  </div>
+  <div class="card" id="manCard" hidden>
+    <h2>Bauteile von Hand</h2>
+    <div class="warn">Nur bei gestopptem, abgekühltem Ofen – im Holzbetrieb nur das Frischluftgebläse. Schnecke und Zünder nur kurz laufen lassen.</div>
+    <label>Laufzeit</label>
+    <div class="seg f" id="testSeg"><button data-v="0.25">15 s</button><button data-v="0.5">30 s</button><button data-v="1">1 min</button><button data-v="5">5 min</button></div>
+    <div id="outs" style="margin-top:8px"></div>
+    <p class="mute" id="noOuts">Noch keine Ausgänge benannt – unter Einstellungen eintragen.</p>
+    <button style="width:100%;margin-top:10px" onclick="allOff()">Alles aus</button>
+    <p class="mute" id="manInfo"></p>
+  </div>
+</section>
+
+<!-- ============ Tab: Bauteile ============ -->
+<section id="t-parts" hidden>
+  <div class="pgrid" id="partGrid"></div>
+  <div class="card"><h2>Messwerte</h2><div id="partVals"></div></div>
+  <div class="card xp"><details><summary>Alle Rohwerte vom Ofen</summary>
+    <p class="mute">Alles, was der Ofen gerade meldet – Betriebsdaten und erweiterte Daten. Hilft herauszufinden, welche Werte dein Ofen zusätzlich liefert.</p>
+    <div class="raw" id="partRaw">–</div></details></div>
+  <p class="mute upd">„Aktiv“ ist aus Zustand, Unterzustand und Stromaufnahme des Ofens abgeleitet – der Ofen meldet seine Bauteile nicht einzeln.</p>
+</section>
+
+<!-- ============ Tab: Einstellungen ============ -->
+<section id="t-set" hidden>
+  <div class="settitle" onclick="setBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span id="setTitle">Einstellungen</span></div>
+  <div class="card menu" id="setMenu"></div>
+  <div class="card" data-pg="conn">
+    <h2>Ofen</h2>
+    <p class="mute" style="margin-top:0">Für Aduro-Hybrid-Öfen (H1, H2, H3 Lux, H4 Lux, H5, H6 Lux) mit NBE-Steuerung. <b>Getestet mit einem Aduro H1.</b> Seriennummer per <b>QR-Code</b> scannen, Seriennummer und Passwort per <b>Foto vom Typenschild</b> (Kamera-Symbol beim PIN-Feld) übernehmen.</p>
+    <label>IP-Adresse des Ofens</label><input id="ip" inputmode="decimal" placeholder="192.168.1.50">
+    <label>Seriennummer</label><div class="inscan"><input id="serial" inputmode="numeric"><button type="button" class="scan" onclick="scanInto('serial')" title="Mit der Kamera scannen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg></button></div>
+    <label>PIN (Aufkleber am Ofen)</label><div class="inscan"><input id="pin" type="password" inputmode="numeric" placeholder="leer lassen = unverändert"><button type="button" class="scan" onclick="photoInto('pin')" title="Typenschild fotografieren"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg></button></div>
+    <label>VPN-App für unterwegs</label><select id="vpnApp"><option value="com.zaneschepke.wireguardautotunnel">WG Tunnel</option><option value="com.wireguard.android">WireGuard</option></select>
+    <div class="row" style="margin-top:16px"><button onclick="disc()">Ofen suchen</button><button class="fire" onclick="saveCfg()">Speichern</button></div>
+  </div>
+  <div class="card" id="bgCard" data-pg="bg">
+    <h2>Hintergrund-Überwachung</h2>
+    <p class="mute" style="margin-top:0">Warnungen, Gebläse-Timer und „Pellets früher stoppen“ laufen auch bei geschlossener App. Android zeigt dafür die Meldung „Ofen wird überwacht“.</p>
+    <div id="bgBat" class="tgl" style="margin-top:12px"><div><b>Akku-Optimierung</b><span class="mute" id="bgBatT"></span></div><button id="bgBatB" onclick="Ofen.fixBattery()">Ausschalten</button></div>
+    <div id="bgNot" class="tgl" style="margin-top:12px"><div><b>Benachrichtigungen</b><span class="mute" id="bgNotT"></span></div><button id="bgNotB" onclick="Ofen.fixNotifications()">Erlauben</button></div>
+    <div class="tgl" style="margin-top:12px"><div><b>Jede Zustandsänderung melden</b><span class="mute">z. B. Zündung, Normalbetrieb, Raumtemperatur erreicht, gestoppt</span></div>
+      <label class="sw"><input type="checkbox" id="nsOn"><i></i></label></div>
+    <p class="mute" id="ver" style="margin-bottom:0"></p>
+  </div>
+  <div class="card" data-pg="pellet">
+    <h2>Pellet-Füllstand</h2>
+    <p class="mute" style="margin-top:0">Der Ofen zählt den Verbrauch selbst. Nach dem Nachfüllen auf der Startseite auf „Pellets“ tippen und „Voll“ oder die Menge eintragen.</p>
+    <div class="row"><div><label>Behälter fasst (kg)</label><input id="hopCap" type="number" inputmode="decimal" min="5" max="200"></div>
+      <div><label>Warnen ab (kg)</label><input id="hopWarn" type="number" inputmode="decimal" min="0" max="50"></div></div>
+    <div class="tgl" style="margin-top:14px"><div><b>Benachrichtigung</b><span class="mute">Meldung aufs Handy, wenn der Füllstand unter die Warnschwelle fällt.</span></div>
+      <label class="sw"><input type="checkbox" id="hopNot"><i></i></label></div>
+  </div>
+  <div class="card xp" data-pg="pellet">
+    <h2>Holzverbrennung Temperatur <span class="xpbadge">EXPERTE</span></h2>
+    <div class="slide"><input type="range" id="pstop" min="270" max="350" step="5"><b id="pstopV">–</b></div>
+    <p class="mute" id="pstopR" style="margin:4px 0 0"></p>
+    <p class="mute">Erreicht das Rauchgas diesen Wert, weil nachgelegtes Holz brennt, stoppt der Ofen die Pelletzufuhr und geht in den Holzbetrieb. Entspricht der Einstellung „Holzverbrennung Temperatur“ in der Aduro-App.</p>
+    <button class="fire" style="width:100%" id="pstopBtn" onclick="savePstop()" disabled>Übernehmen</button>
+  </div>
+  <div class="card xp" data-pg="pellet">
+    <h2>Pellets früher stoppen <span class="xpbadge">EXPERTE</span></h2>
+    <div class="tgl"><div><b>Von der App stoppen lassen</b><span class="mute">Die App stoppt die Pellets schon vor der Ofen-Grenze, wenn das Rauchgas 30 s über dem Wert liegt.</span></div>
+      <label class="sw"><input type="checkbox" id="esOn"><i></i></label></div>
+    <div id="esBox">
+      <div class="slide"><input type="range" id="esT" min="240" max="270" step="5"><b id="esV">–</b></div>
+      <div class="warn" style="margin-top:12px">Läuft im Hintergrund weiter, auch wenn die App geschlossen ist. Liegt das Rauchgas bei reinem Pelletbetrieb über dem Wert, stoppt die App den Ofen unnötig.</div>
+    </div>
+  </div>
+  <div class="card xp" data-pg="pellet">
+    <h2>Automatischer Pelletstart <span class="xpbadge">EXPERTE</span></h2>
+    <div class="tgl"><div><b>Nach dem Holz wieder mit Pellets starten</b><span class="mute">Ist das Holz abgebrannt und fällt das Rauchgas unter den Wert, startet die App die Pellets wieder. Gilt nach einem Stopp durch „Pellets früher stoppen“.</span></div>
+      <label class="sw"><input type="checkbox" id="esRe"><i></i></label></div>
+    <div id="reBox">
+      <div class="slide"><input type="range" id="reT" min="50" max="200" step="5"><b id="reV">–</b></div>
+    </div>
+  </div>
+  <div class="card" data-pg="pellet">
+    <h2>Warnung im Holzbetrieb</h2>
+    <label style="margin-top:0">Warnen, wenn das Rauchgas fällt unter</label>
+    <div class="slide"><input type="range" id="woodMin" min="80" max="250" step="5"><b id="woodV">–</b></div>
+    <p class="mute" style="margin-bottom:0">Dann erscheint „Holz nachlegen?“ – in der App und als Benachrichtigung.</p>
+  </div>
+  <div class="card" id="hmCard" data-pg="hm">
+    <h2>Homematic IP</h2>
+    <div id="hmOff">
+      <p class="mute" style="margin-top:0">Zeigt die Temperaturen deiner Homematic-IP-Räume an und kann den Ofen nach einem Raum steuern. Die Verbindung läuft über die Homematic-IP-Cloud.</p>
+      <label>Access-Point-ID (SGTIN, Aufkleber auf dem Access Point)</label><div class="inscan"><input id="hmAp" placeholder="3014-F711-A000-0000-0000-0001" autocapitalize="characters"><button type="button" class="scan" onclick="scanInto('hmAp')" title="Mit der Kamera scannen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg></button></div>
+      <label>PIN des Access Points (nur falls vergeben)</label><p class="mute" style="margin:0 0 6px;font-size:12.5px">Nur nötig, wenn du in der Homematic-IP-App unter Sicherheit eine PIN festgelegt hast. Ab Werk ist keine PIN gesetzt – dann leer lassen. Das <b>„PW“ auf dem Aufkleber</b> ist etwas anderes (Gerätepasswort für Einrichtung/Firmware-Update) und gehört hier nicht hinein.</p><input id="hmPin" type="password" inputmode="numeric">
+      <button class="fire" style="width:100%;margin-top:14px" id="hmConnBtn" onclick="hmConnect()">Verbinden</button>
+      <div class="warn" id="hmMsg" style="margin-top:12px" hidden></div>
+    </div>
+    <div id="hmOn" hidden>
+      <p class="mute" id="hmInfo" style="margin-top:0"></p>
+      <label style="margin-top:0">Im Bereich „Räume“ anzeigen</label>
+      <div id="hmList"></div>
+      <div class="xp"><div class="sep"></div>
+      <div class="tgl"><div><b>Ofen nach Raum steuern <span class="xpbadge">EXPERTE</span></b><span class="mute">Startet den Ofen 0,5 °C unter dem Ziel und stoppt ihn 0,5 °C darüber. Mindestens 60 min Laufzeit und 30 min Pause.</span></div>
+        <label class="sw"><input type="checkbox" id="thOn"><i></i></label></div>
+      <div id="thBox">
+        <label>Raum</label><select id="thRoom"></select>
+        <label>Zieltemperatur</label>
+        <div class="slide"><input type="range" id="thT" min="15" max="25" step="0.5"><b id="thV">–</b></div>
+        <div class="warn" style="margin-top:12px">Startet den Ofen selbsttätig – auch wenn niemand zu Hause ist. Nur im Pelletbetrieb; im Holz- und Handbetrieb, bei Störungen und solange der Ofen „Ausgeschaltet“ ist, schaltet die App nichts.</div>
+      </div></div>
+      <div class="sep"></div>
+      <div class="tgl"><div><b>Heizkörper im Ofenraum schließen</b><span class="mute">Sobald der Ofen heizt, stellt die App den Raum auf „manuell“ mit niedriger Temperatur – die Ventile gehen zu. Ist der Ofen aus und abgekühlt, kommt nach 15 min der vorherige Zustand zurück (meist der Wochenplan).</span></div>
+        <label class="sw"><input type="checkbox" id="vlOn"><i></i></label></div>
+      <div id="vlBox">
+        <label>Raum, in dem der Ofen steht</label><select id="vlRoom"></select>
+        <label>Heizkörper stellen auf</label>
+        <div class="slide"><input type="range" id="vlT" min="5" max="16" step="0.5"><b id="vlV">–</b></div>
+        <div class="warn" style="margin-top:12px">Läuft im Hintergrund, auch bei geschlossener App. Ist der Ofen 30 min nicht erreichbar, öffnet die App die Heizkörper sicherheitshalber wieder. Beim Trennen von Homematic werden sie ebenfalls zurückgestellt.</div>
+      </div>
+      <div class="row" style="margin-top:14px"><button onclick="hmRefresh()">Aktualisieren</button><button onclick="hmDisconnect()">Trennen</button></div>
+    </div>
+  </div>
+  <div class="card" data-pg="xpm">
+    <h2>Expertenmodus</h2>
+    <div class="tgl"><div><b>Expertenmodus</b><span class="mute" id="xpSub">Schaltet Funktionen frei, die direkt in die Ofensteuerung eingreifen.</span></div>
+      <label class="sw"><input type="checkbox" id="xpOn"><i></i></label></div>
+    <div class="sep"></div>
+    <p class="mute" style="margin:0">Freigeschaltet werden: Gebläse und Bauteile von Hand schalten, Ausgänge benennen, alle Ofen-Werte lesen und ändern, Holzverbrennung Temperatur, Pellets früher stoppen und automatischer Pelletstart sowie die Raumsteuerung (startet den Ofen selbsttätig).</p>
+    <p class="mute" style="margin-bottom:0">Beim Ausschalten werden laufende Bauteile abgeschaltet und diese Automatiken beendet.</p>
+    <button style="width:100%;margin-top:14px" onclick="xpShow(true)">Hinweise lesen</button>
+  </div>
+  <div class="card" data-pg="outs">
+    <h2>Ausgänge benennen</h2>
+    <p class="mute" style="margin-top:0">Nur benannte Ausgänge erscheinen unter „Gebläse“. Feld leeren = ausblenden. Der Name <b>Frischluftgebläse</b> schaltet die Gebläse-Steuerung frei.</p>
+    <div id="names"></div>
+  </div>
+  <div class="card" data-pg="expert">
+    <details open><summary>Alle Ofen-Einstellungen</summary>
+      <p class="mute">Liest eine Gruppe direkt aus dem Ofen. Nur ändern, wenn du weißt, was ein Wert bewirkt.</p>
+      <div class="row"><select id="grp"><option>regulation</option><option>boiler</option><option>misc</option><option>ignition</option><option>fan</option><option>auger</option><option>oxygen</option><option>cleaning</option><option>hopper</option><option>alarm</option><option>manual</option><option>weather</option><option>hot_water</option><option>pump</option></select><button style="flex:0 0 90px" onclick="loadGroup()">Laden</button></div>
+      <div id="sets"></div>
+    </details>
+  </div>
+</section>
+
+<div class="dots" id="dots"></div>
+<nav>
+  <button id="nb-ofen" onclick="tab('ofen')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.4 1.2-4 2.4-5.2.3 1.5 1 2.5 2 3C11 8 11.5 5.3 12 3z"/></svg>Ofen</button>
+  <button id="nb-rooms" hidden onclick="tab('rooms')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/></svg>Räume</button>
+  <button id="nb-fan" class="xp" onclick="tab('fan')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/></svg>Gebläse</button>
+  <button id="nb-parts" onclick="tab('parts')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></svg>Bauteile</button>
+</nav>
+<div id="toast"></div>
+<div id="xpModal" hidden><div class="box">
+  <h3>Expertenmodus einschalten</h3>
+  <p class="mute" style="margin:0">Bitte vollständig lesen und beide Punkte bestätigen.</p>
+  <h4>⚠️ Sicherheitshinweis</h4>
+  <p>Der Expertenmodus schaltet Funktionen frei, die direkt in die Steuerung des Ofens eingreifen: Bauteile wie Schnecke, Zünder und Gebläse von Hand schalten, Werte der Ofensteuerung ändern, Pellets automatisch stoppen und wieder starten und den Ofen nach Raumtemperatur selbsttätig starten – auch wenn niemand zu Hause ist.</p>
+  <ul>
+    <li>Ein Ofen ist eine Feuerstätte. Falsche Einstellungen oder ein Start zur falschen Zeit können zu Rauchaustritt, Verpuffung, Überhitzung oder Brand führen.</li>
+    <li>Starte den Ofen aus der Ferne oder automatisch nur, wenn Brennraum, Tür und Aschekasten in Ordnung sind und nichts Brennbares in der Nähe steht.</li>
+    <li>Schalte Bauteile von Hand nur bei abgekühltem Ofen und nur kurz.</li>
+    <li>Ändere Ofen-Werte nur, wenn du weißt, was sie bewirken, und notiere vorher den alten Wert.</li>
+    <li>Die App ersetzt keine Aufsicht. Rauch- und CO-Melder sowie die Vorgaben von Hersteller und Schornsteinfeger gelten weiter.</li>
+  </ul>
+  <label class="ack"><input type="checkbox" id="xpA1"><span>Ich habe den Sicherheitshinweis gelesen und verstanden.</span></label>
+  <h4>§ Haftungsausschluss</h4>
+  <p>Diese App ist ein privates, kostenloses und inoffizielles Projekt. Sie steht in keiner Verbindung zu Aduro, NBE oder eQ-3 (Homematic IP) und nutzt nicht offiziell dokumentierte Schnittstellen, die sich jederzeit ändern können. Sie wird ohne Gewähr für Funktion, Richtigkeit der Anzeigen oder Verfügbarkeit bereitgestellt.</p>
+  <p>Die Nutzung – insbesondere des Expertenmodus – erfolgt auf eigene Gefahr. Soweit gesetzlich zulässig, wird keine Haftung übernommen für Schäden an Ofen, Gebäude oder sonstigem Eigentum, für Folgeschäden sowie für den Verlust von Garantie- oder Gewährleistungsansprüchen gegenüber dem Hersteller. Unberührt bleibt die Haftung für Vorsatz und grobe Fahrlässigkeit sowie für Schäden an Leben, Körper oder Gesundheit.</p>
+  <label class="ack"><input type="checkbox" id="xpA2"><span>Ich akzeptiere den Haftungsausschluss und nutze den Expertenmodus auf eigene Gefahr.</span></label>
+  <div class="row"><button onclick="xpShow(false)">Abbrechen</button><button class="fire" id="xpGo" disabled onclick="xpEnable()">Einschalten</button></div>
+</div></div>
+<div class="modal" id="numModal" hidden onclick="if(event.target===this)numClose()">
+  <div class="sheet">
+    <b id="numTitle">Wert eingeben</b>
+    <span class="mute" id="numRange"></span>
+    <div class="numrow"><input id="numIn" type="text" inputmode="decimal" autocomplete="off"><span id="numUnit">°C</span></div>
+    <span class="numerr" id="numErr"></span>
+    <div class="row"><button onclick="numClose()">Abbrechen</button><button class="fire" onclick="numOk()">Übernehmen</button></div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const RUN=['2','4','5','6','9','11','32'];
+/* Alarme: Ofen steht und startet nicht von selbst – mit Hinweis, was zu tun ist */
+const ALARM={'13':'Brennschale auf liegengebliebene Pellets prüfen, dann neu starten.',
+ '20':'Rauchgas zu niedrig. Vor dem Start Brennschale prüfen und überzählige Pellets entfernen, Brennkammer reinigen, Luftklappe vorn geschlossen.',
+ '15':'Rauchgassensor prüfen lassen.','17':'Fallschachtsensor prüfen lassen.','18':'Brenner prüfen.','19':'Externe Schnecke prüfen.',
+ '24':'Luftklappe öffnen, dann neu starten.','28':'Tür schließen.','33':'CO-Sensor prüfen lassen.','34':'Brennschale prüfen und reinigen.','35':'Abgasgebläse prüfen lassen.'};
+let S=null,target=null,tTimer=null,busy=false,lastOk=0,woodWas=false,nextT=null;
+let vpnApp='com.zaneschepke.wireguardautotunnel',testMin='0.5',fanMin='15';
+let man={running:{},names:{},fresh_air_bit:null,wood:false},online=false;
+function manVisible(){/* nur zeigen, wenn der Ofen steht – oder wenn gerade ein Bauteil (außer Gebläse) läuft */
+ const fb=String(man.fresh_air_bit),others=Object.keys(man.running).some(k=>k!==fb);
+ const free=online&&S&&!S.wood_mode&&!RUN.includes(S.state);
+ $('manCard').hidden=!(free||others)}
+function toast(m,err){const t=$('toast');t.textContent=m;t.className='show'+(err?' err':'');clearTimeout(t._h);t._h=setTimeout(()=>t.className='',3200)}
+const _pend={};let _rid=0;
+window.__ofenResolve=(id,txt)=>{const p=_pend[id];if(!p)return;delete _pend[id];let j;try{j=JSON.parse(txt)}catch(e){j={error:'Ungültige Antwort'}}if(j.error)p.rej(new Error(j.error));else p.res(j.data)};
+function api(p,body){return new Promise((res,rej)=>{const id=++_rid;_pend[id]={res,rej};Ofen.request(id,p,body===undefined?null:JSON.stringify(body))})}
+const num=(v,d=0)=>v==null||v===''||isNaN(+v)?'–':(+v).toFixed(d).replace('.',',');
+const fmt=s=>s==null?'läuft':(s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):s+' s');
+
+/* Tabs */
+let curTab='ofen',lastMain='ofen';
+/* Homematic: Reiter „Räume“ nur zeigen, wenn eine Verbindung eingerichtet ist */
+let hmOn=false;try{hmOn=localStorage.getItem('hm')==='1'}catch(e){}
+/* Expertenmodus: sicherheitsrelevante Funktionen nur nach Bestätigung */
+let XP=false;try{XP=localStorage.getItem('xp')==='1'}catch(e){}document.body.classList.toggle('noxp',!XP);
+function setXp(on){on=!!on;document.body.classList.toggle('noxp',!on);if(on===XP)return;XP=on;try{localStorage.setItem('xp',on?'1':'0')}catch(e){}
+ if(!on&&curTab==='fan')tab('ofen',0);applyHm();if(curTab==='set'&&!setPage)buildMenu();if(S)render(S)}
+const mainTabs=()=>['ofen'].concat(hmOn?['rooms']:[],XP?['fan']:[],['parts']);
+function applyHm(){$('nb-rooms').hidden=!hmOn;
+ const MAIN=mainTabs();$('dots').innerHTML=MAIN.map(()=>'<i></i>').join('');
+ document.querySelectorAll('#dots i').forEach((d,i)=>d.classList.toggle('on',MAIN[i]===curTab));
+ if(!hmOn){$('thHome').hidden=true;if(lastMain==='rooms')lastMain='ofen';if(curTab==='rooms')tab('ofen',0)}}
+function setHm(on){on=!!on;if(on===hmOn)return;hmOn=on;try{localStorage.setItem('hm',on?'1':'0')}catch(e){}applyHm();if(curTab==='set'&&!setPage)buildMenu()}
+function tab(n,dir){const MAIN=mainTabs();if(!MAIN.includes(n)&&n!=='set')n='ofen';const prev=curTab;curTab=n;if(MAIN.includes(n))lastMain=n;if(n==='set'&&prev!=='set'){setPage=null;openPage(null)}
+ for(const t of ['ofen','fan','rooms','parts','set']){$('t-'+t).hidden=t!==n;const nb=$('nb-'+t);if(nb)nb.classList.toggle('on',t===n)}
+ $('gearBtn').classList.toggle('on',n==='set');document.body.classList.toggle('inset',n==='set');
+ document.querySelectorAll('#dots i').forEach((d,i)=>d.classList.toggle('on',MAIN[i]===n));
+ if(dir===undefined&&prev!==n)dir=(n==='set'||MAIN.indexOf(n)>MAIN.indexOf(prev))?1:-1;
+ const sec=$('t-'+n);sec.classList.remove('inL','inR');if(dir){void sec.offsetWidth;sec.classList.add(dir>0?'inL':'inR')}
+ if(n==='parts'&&S){advAt=0;renderParts(S)}
+ placeFan();try{localStorage.setItem('tab',n)}catch(e){}window.scrollTo(0,0)}
+/* Wischen links/rechts */
+(function(){let x0=null,y0=0,t0=0;
+ document.addEventListener('touchstart',e=>{const el=e.target;if(e.touches.length!==1||el.closest('input,select,textarea,.chips')){x0=null;return}
+  x0=e.touches[0].clientX;y0=e.touches[0].clientY;t0=Date.now()},{passive:true});
+ document.addEventListener('touchend',e=>{if(x0===null)return;const t=e.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0;x0=null;
+  if(Math.abs(dx)<70||Math.abs(dx)<1.6*Math.abs(dy)||Date.now()-t0>700)return;
+  if(curTab==='set'){if(dx>0)setBack();return}
+  const MAIN=mainTabs(),i=MAIN.indexOf(curTab),j=i+(dx<0?1:-1);if(j>=0&&j<MAIN.length)tab(MAIN[j],dx<0?1:-1)},{passive:true})})();
+function placeFan(){/* im Holzbetrieb zusätzlich auf der Startseite, sonst nur unter „Gebläse“ */
+ const fc=$('fanCard'),dest=(S&&S.wood_mode&&curTab==='ofen')?$('homeFan'):$('fanSlot');if(fc&&fc.parentNode!==dest)dest.append(fc)}
+
+/* Verbindung */
+function setNet(st,msg){$('net').className='net'+(st==='ok'?' ok':st==='bad'?' bad':'');$('netT').textContent=msg}
+setInterval(()=>{if(lastOk&&Date.now()-lastOk>35000)setNet('bad','Keine Verbindung')},5000);
+function vpnLink(){return '#'}
+document.addEventListener('click',e=>{if(e.target.closest('#vpnBtn,#vpnHomeBtn')){e.preventDefault();if(!Ofen.openApp(vpnApp))toast('VPN-App ist nicht installiert',true)}});
+async function offline(e){
+ $('hero').dataset.mode='err';$('bigV').textContent='–';$('m1').textContent='–';$('m2').textContent='–';$('gauge').hidden=true;$('powerBtn').disabled=true;
+ $('state').textContent='Keine Verbindung';
+ let n={route:'none'};try{n=await api('net')}catch(x){}
+ $('vpnBtn').href=vpnLink();
+ if(n.route==='wlan'){setNet('bad','Ofen antwortet nicht');$('substate').textContent='Im Heim-WLAN, aber der Ofen meldet sich nicht. Ist er eingeschaltet?';$('vpnBox').hidden=true}
+ else if(n.route==='vpn'){setNet('bad','VPN · keine Antwort');$('substate').textContent='VPN ist an, aber der Ofen antwortet nicht.';$('vpnMsg').textContent='Prüfe in der VPN-App, ob der Tunnel verbunden ist.';$('vpnBox').hidden=false}
+ else{setNet('bad','Kein WLAN · kein VPN');$('substate').textContent='';$('vpnMsg').textContent='Du bist nicht im Heim-WLAN. Schalte das VPN ein – die App verbindet sich dann von selbst.';$('vpnBox').hidden=false}
+}
+function schedule(ms){clearTimeout(nextT);nextT=setTimeout(()=>{if(!document.hidden)refresh();else schedule(ms)},ms)}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+
+/* Status */
+function wood(s){const a=$('woodAlert');if(s.wood_warn){$('woodT').textContent='Rauchgas '+num(s.smoke_temp)+' °C – unter '+num(s.wood_min)+' °C. Holz nachlegen?';a.hidden=false;
+ if(!woodWas){try{Ofen.vibrate()}catch(e){}}}else a.hidden=true;woodWas=!!s.wood_warn}
+function render(s){
+ S=s;const w=!!s.wood_mode,running=RUN.includes(s.state)||w;
+ const al=ALARM[String(s.state)];
+ const hal=!!s.halted;
+ $('hero').dataset.mode=hal?'halt':al?'alarm':w?(s.wood_warn?'low':'wood'):(running?'run':'off');
+ $('state').textContent=hal?'Ausgeschaltet'+(running?' · Ofen stoppt …':al?' · '+s.state_text:''):(s.early&&s.early.stopped)?'Holzbetrieb (App)':s.state_text;
+ $('substate').textContent=hal?'Alle Automatiken der App sind pausiert – nichts startet von selbst, bis du „Starten“ drückst.'+(w?' Holz brennt noch.':''):al?al:(s.early&&s.early.msg)?s.early.msg:(s.substate_text&&s.substate_text!=='normal'?s.substate_text:'');
+ if(w){$('bigV').textContent=num(s.smoke_temp);$('bigL').textContent='Rauchgas · Holzbetrieb';
+  $('m1').textContent=num(s.room_temp,1)+' °C';$('m1l').textContent='Raum';$('m2').textContent=num(s.wood_min)+' °C';$('m2l').textContent='Warnung unter';
+  $('gauge').hidden=false;$('gFill').style.width=Math.max(3,Math.min(100,(+s.smoke_temp||0)/(2*(+s.wood_min||150))*100))+'%';
+ }else if(ctlHm()&&s.thermo.temp!=null){const th=s.thermo;
+  /* Raumsteuerung aktiv: Homematic-Raum und -Ziel zeigen, Ofen-Fühler nur klein */
+  $('bigV').textContent=num(th.temp,1);$('bigL').textContent=(th.label||'Raum')+' · Homematic  (Ofen-Fühler '+num(s.room_temp,1)+' °C)';
+  $('m1').textContent=t1(th.target)+' °C';$('m1l').textContent='Ziel · Homematic';$('m2').textContent=num(s.smoke_temp)+' °C';$('m2l').textContent='Rauchgas';$('gauge').hidden=true
+ }else{$('bigV').textContent=num(s.room_temp,1);$('bigL').textContent='Raumtemperatur';
+  $('m1').textContent=num(s.target_temp)+' °C';$('m1l').textContent='Ziel';$('m2').textContent=num(s.smoke_temp)+' °C';$('m2l').textContent='Rauchgas';$('gauge').hidden=true}
+ const pb=$('powerBtn');pb.disabled=false;const stopMode=!hal&&running;pb.classList.toggle('stop',stopMode);$('powerT').textContent=stopMode?'Ausschalten':'Starten';
+ $('haltBtn').hidden=hal||running;
+ $('pelletCard').hidden=w;
+ placeFan();
+ const lv={'10':1,'50':2,'100':3}[String(s.fixed_power)];document.querySelectorAll('#lv button').forEach(b=>b.classList.toggle('sel',+b.dataset.l===lv));
+ ctlRender(s);
+ renderRooms(s);renderParts(s);renderHop(s);
+ $('upd').textContent='Aktualisiert '+new Date().toLocaleTimeString('de-DE');
+}
+async function refresh(){if(!APPON)return;if(busy)return schedule(2000);try{const s=await api('status');lastOk=Date.now();online=true;$('vpnBox').hidden=true;
+ const vh=s.route==='vpn'&&s.home_wifi;setNet('ok','Verbunden · '+(vh?'VPN an!':s.route==='vpn'?'VPN':'WLAN'));$('vpnHome').hidden=!vh;$('vpnHomeBtn').href=vpnLink();wood(s);render(s);manVisible();schedule(10000)}
+ catch(e){if(/Funktionen sind aus/.test(e.message||'')){setAppOn(false);return}online=false;manVisible();await offline(e);schedule(4000)}}
+async function run(fn,ok){busy=true;try{await fn();toast(ok)}catch(e){toast(e.message,true)}busy=false;setTimeout(refresh,1500)}
+
+/* Bedienung */
+function powerToggle(){const running=S&&(RUN.includes(S.state)||S.wood_mode);
+ if(S&&!S.halted&&running)return haltNow();
+ run(()=>api('start',{}),S&&S.halted?'Eingeschaltet – Ofen startet, Automatiken wieder aktiv':'Startbefehl gesendet')}
+function haltNow(){if(!confirm('Ofen ausschalten?\n\nDer Ofen stoppt und alle Automatiken der App pausieren (Raumsteuerung, Pellet-Neustart, Heizkörper-Steuerung), bis du wieder „Starten“ drückst.'))return;
+ if(S){S.halted=true;render(S)}run(()=>api('stop',{}),'Ausgeschaltet – Automatiken pausiert')}
+function power(l){run(()=>api('power',{level:l}),'Heizstufe '+['','niedrig','mittel','hoch'][l])}
+function bump(d){if(ctlHm()){thBump(d*0.5);$('tv').textContent=t1($('thT').value)+' °C';if($('m1l').textContent==='Ziel · Homematic')$('m1').textContent=t1($('thT').value)+' °C';return}
+ if(target===null)target=20;target=Math.max(5,Math.min(35,target+d));$('tv').textContent=target+' °C';
+ clearTimeout(tTimer);tTimer=setTimeout(()=>{const t=target;run(()=>api('target',{temp:t}),'Zieltemperatur '+t+' °C').then(()=>tTimer=null)},1200)}
+
+/* Umschalter Ofen-Fühler ↔ Homematic-Raumsteuerung */
+const ctlHm=()=>!!(XP&&hmOn&&S&&S.thermo&&S.thermo.enabled);
+function ctlRender(s){const hm=ctlHm(),th=s.thermo||{};
+ $('ctlSeg').hidden=!hmOn||!XP;document.querySelectorAll('#ctlSeg button').forEach(b=>b.classList.toggle('sel',(b.dataset.c==='hm')===hm));
+ if(hm){$('tvL').textContent=(th.label||'Raum')+' · Homematic';if(!thTimer&&th.target!=null)$('tv').textContent=t1(th.target)+' °C'}
+ else{$('tvL').textContent='Raum-Zieltemperatur · Ofen';if(!tTimer&&s.target_temp!=null){target=Math.round(+s.target_temp);$('tv').textContent=target+' °C'}}}
+async function setCtl(m){if((m==='hm')===ctlHm())return;
+ try{if(m==='hm'){if(!HM||!HM.sensors)await hmLoad();
+   const id=(HM&&HM.ctrl_id)||$('thRoom').value;
+   if(!id){toast('Bitte zuerst unter Einstellungen → Homematic IP einen Raum wählen',true);tab('set');openPage('hm');return}
+   await api('config',{hm_ctrl:true,hm_ctrl_id:id,hm_ctrl_target:$('thT').value||(HM&&HM.ctrl_target)||21});
+   $('thOn').checked=true;$('thBox').hidden=false;toast('Ofen regelt jetzt nach Homematic-Raum – Ofen-Ziel wird auf Homematic-Ziel + 2 °C gehoben')}
+  else{await api('config',{hm_ctrl:false});$('thOn').checked=false;$('thBox').hidden=true;toast('Ofen regelt jetzt nach eigenem Fühler – alte Ofen-Zieltemperatur wiederhergestellt')}
+  if(S&&S.thermo)S.thermo.enabled=m==='hm';if(S)render(S);if(HM)HM.ctrl=m==='hm'}
+ catch(e){toast(e.message,true)}setTimeout(refresh,600)}
+
+/* Gebläse & Handbetrieb */
+document.querySelectorAll('#fanChips button').forEach(b=>b.onclick=()=>{fanMin=b.dataset.m;selChips()});
+document.querySelectorAll('#testSeg button').forEach(b=>b.onclick=()=>{testMin=b.dataset.v;selChips()});
+function selChips(){document.querySelectorAll('#fanChips button').forEach(b=>b.classList.toggle('sel',b.dataset.m===fanMin));
+ document.querySelectorAll('#testSeg button').forEach(b=>b.classList.toggle('sel',b.dataset.v===testMin))}
+async function fanStart(){const o=man.fresh_air_bit+1;await run(()=>api('manual/switch',{output:o,on:true,minutes:fanMin}),'Frischluftgebläse an'+(fanMin==='stop'?'':' für '+fanMin+' min'));manRefresh()}
+async function fanStop(){const o=man.fresh_air_bit+1;await run(()=>api('manual/switch',{output:o,on:false}),'Frischluftgebläse aus');manRefresh()}
+function buildNames(){const box=$('names');box.innerHTML='';for(let o=1;o<=8;o++){const r=document.createElement('div');r.className='out';
+ r.innerHTML=`<div class="n">${o}</div><input id="nm${o}" placeholder="unbenannt">`;box.append(r);
+ const i=r.querySelector('input');i.addEventListener('change',()=>saveName(o,i.value))}}
+async function saveName(o,v){try{await api('manual/name',{output:o,name:v,fresh_air:/frischluft/i.test(v)});toast(v?'Ausgang '+o+' heißt jetzt „'+v+'“':'Ausgang '+o+' ausgeblendet');manRefresh()}catch(e){toast(e.message,true)}}
+function renderOuts(){const box=$('outs');const named=Object.keys(man.names).map(Number).filter(o=>o>=1&&o<=8).sort((a,b)=>a-b);
+ const key=named.map(o=>o+':'+man.names[o]).join('|');
+ if(box._k!==key){box._k=key;box.innerHTML='';for(const o of named){const r=document.createElement('div');r.className='out';
+  r.innerHTML=`<div class="n">${o}</div><div class="lbl"></div><button id="ob${o}">Start</button>`;r.querySelector('.lbl').textContent=man.names[o];
+  r.querySelector('button').onclick=()=>toggleOut(o);box.append(r)}}
+ $('noOuts').style.display=named.length?'none':'';
+ for(const o of named){const b=$('ob'+o),k=String(o-1),on=k in man.running;b.textContent=on?fmt(man.running[k]):'Start';b.classList.toggle('run',on)}}
+async function toggleOut(o){const on=!(String(o-1) in man.running);
+ const lbl=document.querySelector('#testSeg button[data-v="'+testMin+'"]').textContent;
+ if(on&&!confirm((man.names[o]||'Ausgang '+o)+' für '+lbl+' einschalten?'))return;
+ await run(()=>api('manual/switch',{output:o,on,minutes:testMin}),(man.names[o]||'Ausgang '+o)+(on?' an':' aus'));manRefresh()}
+async function allOff(){await run(()=>api('manual/off',{}),'Alles aus');manRefresh()}
+/* Countdown-Ring: Gesamtdauer merken wir uns beim ersten Sehen bzw. wenn die Restzeit steigt (neu gestartet) */
+let fanTotal=0;
+function fanBadge(){const fb=man.fresh_air_bit,k=fb==null?null:String(fb),on=k!=null&&k in (man.running||{});const b=$('fanBadge');
+ if(!on){b.hidden=true;fanTotal=0;return}
+ b.hidden=false;const r=man.running[k];
+ if(r==null){$('fanBadgeT').textContent='∞';$('fanArc').style.strokeDashoffset=0;fanTotal=0;return}
+ if(!fanTotal||r>fanTotal)fanTotal=r;
+ $('fanBadgeT').textContent=Math.floor(r/60)+':'+String(r%60).padStart(2,'0');
+ $('fanArc').style.strokeDashoffset=(282.7*(1-r/Math.max(1,fanTotal))).toFixed(1)}
+async function manRefresh(){if(!APPON)return;try{man=await api('manual');fanBadge();
+ for(let o=1;o<=8;o++){const i=$('nm'+o);if(document.activeElement!==i)i.value=man.names[o]||''}
+ renderOuts();manVisible();if(curTab==='parts'&&S)renderParts(S);
+ $('manInfo').textContent=man.error?'Verbindungsproblem: '+man.error:(man.wood?'Holzbetrieb: nur das Frischluftgebläse ist freigegeben.':'');
+ const fb=man.fresh_air_bit,has=fb!=null;$('fanCtl').hidden=!has;$('fanHint').hidden=has;
+ const on=has&&String(fb) in man.running,s=has?man.running[String(fb)]:null;
+ $('fanIco').classList.toggle('on',on);$('fanSub').textContent=on?(s==null?'Läuft bis Stopp':'Läuft · schaltet selbst ab'):'Aus';$('fanT').textContent=on&&s!=null?fmt(s):'';
+}catch(e){}}
+
+/* Einstellungen */
+async function loadGroup(){const g=$('grp').value,box=$('sets');box.innerHTML='<p class="mute">Lade …</p>';
+ try{const d=await api('settings/read',{group:g});box.innerHTML='';
+  const entries=typeof d==='object'&&d?Object.entries(d):[];if(!entries.length){box.innerHTML='<p class="mute">Keine Werte</p>';return}
+  for(const [k,v0] of entries.sort()){let v=v0;const row=document.createElement('div');row.className='set';
+   const c=document.createElement('code');c.textContent=k;const i=document.createElement('input');i.value=v;const b=document.createElement('button');b.textContent='OK';
+   b.onclick=()=>{if(i.value===v)return;if(!confirm(g+'.'+k+' von '+v+' auf '+i.value+' ändern?'))return;run(()=>api('settings/write',{path:g+'.'+k,value:i.value}),g+'.'+k+' = '+i.value).then(()=>v=i.value)};
+   row.append(c,i,b);box.append(row)}
+ }catch(e){box.innerHTML='';toast(e.message,true)}}
+let pstopCur=null;
+$('pstop').addEventListener('input',()=>{$('pstopV').textContent=$('pstop').value+' °C';$('pstopBtn').disabled=+$('pstop').value===pstopCur});
+async function loadPstop(){try{const d=await api('pelletstop');pstopCur=Math.round(d.value);
+ $('pstop').min=d.min;$('pstop').max=d.max;$('pstopR').textContent='Vom Ofen erlaubt: '+d.min+'–'+d.max+' °C'+(d.source==='Ofen'?'':' (geschätzt)');$('pstop').value=pstopCur;$('pstopV').textContent=pstopCur+' °C';$('pstopBtn').disabled=true}catch(e){$('pstopV').textContent='–'}}
+async function savePstop(){const v=+$('pstop').value;if(!confirm('Holzverbrennung Temperatur auf '+v+' °C setzen?'))return;
+ const b=$('pstopBtn');b.disabled=true;b.textContent='Speichere und prüfe …';busy=true;
+ try{await api('pelletstop',{value:v});pstopCur=v;$('pstop').value=v;$('pstopV').textContent=v+' °C';toast('Holzverbrennung Temperatur '+v+' °C gespeichert')}
+ catch(e){toast(e.message,true);await loadPstop()}
+ busy=false;b.textContent='Übernehmen';b.disabled=+$('pstop').value===pstopCur}
+function esShow(){$('esBox').hidden=!$('esOn').checked}
+async function esSave(extra){try{await api('config',extra)}catch(e){toast(e.message,true)}}
+$('esOn').addEventListener('change',()=>{esShow();esSave({early_stop:$('esOn').checked});toast($('esOn').checked?'Pellets früher stoppen: an ('+$('esT').value+' °C)':'Pellets früher stoppen: aus')});
+$('esRe').addEventListener('change',()=>{$('reBox').hidden=!$('esRe').checked;esSave({early_restart:$('esRe').checked});toast($('esRe').checked?'Automatischer Neustart an':'Automatischer Neustart aus')});
+$('esT').addEventListener('input',()=>$('esV').textContent=$('esT').value+' °C');
+$('esT').addEventListener('change',()=>{esSave({early_temp:$('esT').value});toast('Pellets stoppen ab '+$('esT').value+' °C')});
+$('woodMin').addEventListener('input',()=>$('woodV').textContent=$('woodMin').value+' °C');
+$('woodMin').addEventListener('change',()=>{api('config',{wood_min:$('woodMin').value}).then(()=>toast('Warnung unter '+$('woodMin').value+' °C')).catch(e=>toast(e.message,true))});
+$('reT').addEventListener('input',()=>$('reV').textContent=$('reT').value+' °C');
+$('reT').addEventListener('change',()=>{api('config',{early_restart_temp:$('reT').value}).then(()=>toast('Pelletstart unter '+$('reT').value+' °C')).catch(e=>toast(e.message,true))});
+async function loadCfg(first){try{const c=await api('config');CFG=c;setAppOn(c.app_on);setHm(c.hm);setXp(c.expert);$('xpOn').checked=!!c.expert;$('nsOn').checked=c.notify_state!==false;$('woodV').textContent=(c.wood_min||150)+' °C';$('reT').value=c.early_restart_temp||100;$('reV').textContent=(c.early_restart_temp||100)+' °C';$('reBox').hidden=!c.early_restart;$('esOn').checked=!!c.early_stop;$('esRe').checked=!!c.early_restart;$('esT').value=c.early_temp||240;$('esV').textContent=(c.early_temp||240)+' °C';esShow();$('ip').value=c.ip||'';$('serial').value=c.serial||'';$('woodMin').value=c.wood_min||150;
+ vpnApp=c.vpn_app||vpnApp;$('vpnApp').value=vpnApp;if(first&&(!c.ip||!c.serial||!c.has_pin)){tab('set');openPage('conn')}}catch(e){}}
+async function saveCfg(){try{await api('config',{ip:$('ip').value,serial:$('serial').value,pin:$('pin').value,vpn_app:$('vpnApp').value});
+ vpnApp=$('vpnApp').value;$('pin').value='';toast('Gespeichert');refresh()}catch(e){toast(e.message,true)}}
+async function disc(){toast('Suche Ofen im WLAN …');try{const f=await api('discover',{});$('ip').value=f.ip||'';$('serial').value=f.serial||'';toast('Gefunden: '+f.ip)}catch(e){toast(e.message,true)}}
+
+/* Homematic IP */
+const ICO_ROOM='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/></svg>';
+const ICO_FIRE='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 3.5 5.5 5.6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.6 1.3-4.3 2.6-5.6.3 1.7 1 2.8 2.2 3.3C10.9 7.7 11.4 4.6 12 2z"/></svg>';
+const esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const t1=v=>v==null||v===''||isNaN(+v)?'–':(+v).toFixed(1).replace('.',',');
+const ICO_WIN='<svg class="rw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M12 3v18M4 12h16"/></svg>';
+function renderRooms(s){const rs=s.rooms||[],th=s.thermo||{},conn=s.rooms!==undefined;setHm(conn);
+ // Startseite: nur eine Zeile zur Raumsteuerung
+ const vl=s.valve||{};if(vl.enabled&&hmOn||vl.closed){$('valveHome').hidden=false;$('valveHome').textContent='Heizkörper'+(vl.label?' '+vl.label:'')+' · '+(vl.msg||(vl.closed?'zu':'auf'))}else $('valveHome').hidden=true;
+ if(th.enabled&&hmOn){$('thHome').hidden=false;$('thHome').textContent='Raumsteuerung'+(th.label?' · '+th.label+' '+t1(th.temp)+' °C → '+t1(th.target)+' °C':'')+(th.msg?' · '+th.msg:'')}else $('thHome').hidden=true;
+ // Bereich Räume
+ $('thCard').hidden=!th.enabled;
+ if(th.enabled){$('thRoomN').textContent=th.label||'–';$('thMsg').textContent=th.msg||'';$('thTemp').textContent=t1(th.temp)+' °C';if(!thTimer){$('thTarget').textContent=t1(th.target)+' °C';if(th.target!=null)$('thT').value=th.target}}
+ $('roomGrid').innerHTML=rs.map((r,i)=>`<div class="rt${r.ctrl?' ctrl':''}${rs.length%2&&i===rs.length-1?' wide':''}">${r.window==='OPEN'?ICO_WIN:''}
+  <div class="rl">${esc(r.label)}</div><div class="rv">${t1(r.temp)}<small> °C</small></div>
+  <div class="rs">${r.hum!=null?'Feuchte '+Math.round(r.hum)+' %':''}${r.set!=null&&r.kind==='Raum'?'<br>Soll '+t1(r.set)+' °C':''}${r.window==='OPEN'?'<br>Fenster offen':''}</div></div>`).join('');
+ const empty=!rs.length;$('roomsEmpty').hidden=!empty;$('roomsFoot').hidden=!conn;
+ $('roomsEmptyT').textContent=conn?'Noch keine Räume ausgewählt. Unter Einstellungen → Homematic IP auswählen, was hier erscheinen soll.':'Verbinde die App mit deinem Homematic-IP-Access-Point, um hier Raumtemperaturen, Luftfeuchte und offene Fenster zu sehen.';
+ document.querySelector('#roomsEmpty button').textContent=conn?'Räume auswählen':'Homematic einrichten';
+ const age=s.rooms_age;$('roomsAge').textContent=s.rooms_error?s.rooms_error:(conn&&age>=0?'Homematic: vor '+(age<60?'weniger als 1 min':Math.round(age/60)+' min'):'')}
+async function roomsRefresh(){try{await api('hm/refresh',{});toast('Homematic aktualisiert')}catch(e){toast(e.message,true)}refresh()}
+let HM=null,hmPoll=null;
+async function hmLoad(){try{HM=await api('hm')}catch(e){return}setHm(HM.connected);
+ $('hmOff').hidden=HM.connected;$('hmOn').hidden=!HM.connected;
+ if(HM.pending&&!hmPoll&&!HM.connected){$('hmMsg').hidden=false;$('hmMsg').textContent='Kopplung läuft – jetzt die blaue Taste am Access Point drücken.';hmWait()}
+ if(!HM.connected)return;
+ $('hmInfo').textContent='Verbunden mit Access Point '+HM.ap.replace(/(.{4})(?=.)/g,'$1-')+(HM.error?' · '+HM.error:(HM.age>=0?' · aktualisiert vor '+(HM.age<60?'<1':Math.round(HM.age/60))+' min':''));
+ const sh=new Set(HM.show||[]);
+ $('hmList').innerHTML=HM.sensors.length?HM.sensors.map((r,i)=>`<div class="hmrow"><div class="nm"><b>${esc(r.label)}</b><span>${esc(r.kind)} · ${t1(r.temp)} °C${r.hum!=null?' · '+Math.round(r.hum)+' %':''}</span></div>
+  <label class="sw"><input type="checkbox" data-i="${i}" ${sh.has(r.id)?'checked':''}><i></i></label></div>`).join(''):'<p class="mute">Noch keine Räume geladen – „Aktualisieren“ antippen.</p>';
+ $('hmList').querySelectorAll('input').forEach(cb=>cb.onchange=()=>{const r=HM.sensors[+cb.dataset.i];api('hm/show',{id:r.id,show:cb.checked}).then(()=>{toast(r.label+(cb.checked?' wird angezeigt':' ausgeblendet'));refresh()}).catch(e=>toast(e.message,true))});
+ const sel=$('thRoom');sel.innerHTML=HM.sensors.map(r=>`<option value="${esc(r.id)}">${esc(r.label)} (${esc(r.kind)})</option>`).join('');
+ if(HM.ctrl_id)sel.value=HM.ctrl_id;
+ const rooms=HM.sensors.filter(r=>r.kind==='Raum');$('vlRoom').innerHTML=rooms.length?rooms.map(r=>`<option value="${esc(r.id)}">${esc(r.label)}</option>`).join(''):'<option value="">– keine Räume –</option>';
+ if(HM.valve_id)$('vlRoom').value=HM.valve_id;$('vlOn').checked=!!HM.valve;$('vlBox').hidden=!HM.valve;$('vlT').value=HM.valve_temp;$('vlV').textContent=t1(HM.valve_temp)+' °C';
+ $('thOn').checked=!!HM.ctrl;$('thBox').hidden=!HM.ctrl;$('thT').value=HM.ctrl_target;$('thV').textContent=t1(HM.ctrl_target)+' °C'}
+async function hmConnect(){const ap=$('hmAp').value.trim();if(!ap){toast('Bitte die Access-Point-ID eintragen',true);return}
+ const b=$('hmConnBtn');b.disabled=true;b.textContent='Verbinde …';
+ try{await api('hm/connect',{ap,pin:$('hmPin').value.trim()});$('hmMsg').hidden=false;$('hmMsg').textContent='Jetzt die blaue Taste am Access Point drücken (innerhalb von 3 Minuten).';hmWait()}
+ catch(e){toast(e.message,true);$('hmMsg').hidden=false;$('hmMsg').textContent=e.message}
+ b.disabled=false;b.textContent='Verbinden'}
+function hmWait(){clearInterval(hmPoll);hmPoll=setInterval(async()=>{try{const r=await api('hm/confirm',{});
+  if(r.done){clearInterval(hmPoll);hmPoll=null;$('hmMsg').hidden=true;try{Ofen.vibrate()}catch(e){}setHm(true);toast('Homematic IP verbunden – Reiter „Räume“ ist da');hmLoad();refresh()}}
+  catch(e){clearInterval(hmPoll);hmPoll=null;$('hmMsg').textContent=e.message;toast(e.message,true)}},2500)}
+async function hmRefresh(){try{await api('hm/refresh',{});toast('Homematic aktualisiert')}catch(e){toast(e.message,true)}hmLoad();refresh()}
+async function hmDisconnect(){if(!confirm('Verbindung zu Homematic IP trennen? Raumsteuerung und Heizkörper-Steuerung werden ausgeschaltet, geschlossene Heizkörper zurückgestellt.'))return;await api('hm/disconnect',{});toast('Homematic getrennt – Reiter „Räume“ ausgeblendet');hmLoad();refresh()}
+$('thOn').addEventListener('change',async()=>{const on=$('thOn').checked;$('thBox').hidden=!on;
+ const body={hm_ctrl:on,hm_ctrl_id:$('thRoom').value,hm_ctrl_target:$('thT').value};
+ try{await api('config',body);toast(on?'Raumsteuerung an: '+$('thRoom').selectedOptions[0]?.textContent+' → '+t1($('thT').value)+' °C':'Raumsteuerung aus');refresh()}catch(e){toast(e.message,true)}});
+$('thRoom').addEventListener('change',()=>api('config',{hm_ctrl_id:$('thRoom').value}).then(()=>{toast('Raum: '+$('thRoom').selectedOptions[0].textContent);refresh()}));
+$('vlOn').addEventListener('change',async()=>{const on=$('vlOn').checked;
+ if(on&&!$('vlRoom').value){$('vlOn').checked=false;toast('Kein Raum gefunden – erst „Aktualisieren“ antippen',true);return}
+ $('vlBox').hidden=!on;
+ try{await api('config',{hm_valve:on,hm_valve_id:$('vlRoom').value,hm_valve_temp:$('vlT').value});toast(on?'Heizkörper '+$('vlRoom').selectedOptions[0].textContent+' schließen, wenn der Ofen heizt':'Heizkörper-Steuerung aus – Heizkörper werden zurückgestellt');refresh()}catch(e){toast(e.message,true)}});
+$('vlRoom').addEventListener('change',()=>api('config',{hm_valve_id:$('vlRoom').value}).then(()=>{toast('Ofenraum: '+$('vlRoom').selectedOptions[0].textContent);refresh()}).catch(e=>toast(e.message,true)));
+$('vlT').addEventListener('input',()=>$('vlV').textContent=t1($('vlT').value)+' °C');
+$('vlT').addEventListener('change',()=>api('config',{hm_valve_temp:$('vlT').value}).then(()=>toast('Heizkörper auf '+t1($('vlT').value)+' °C, wenn der Ofen heizt')).catch(e=>toast(e.message,true)));
+$('thT').addEventListener('input',()=>$('thV').textContent=t1($('thT').value)+' °C');
+$('thT').addEventListener('change',()=>api('config',{hm_ctrl_target:$('thT').value}).then(()=>{toast('Zieltemperatur '+t1($('thT').value)+' °C');refresh()}));
+
+/* Einstellungen: Menü und Unterseiten */
+const SVG=p=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';
+const PAGES=[
+ {id:'conn',t:'Ofen & Verbindung',c:'linear-gradient(135deg,#3b82f6,#06b6d4)',i:SVG('<path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5.5 12.2a10 10 0 0 1 13 0"/><path d="M9 15.8a5 5 0 0 1 6 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/>')},
+ {id:'pellet',t:'Pellets & Holz',c:'linear-gradient(135deg,#ff8a3d,#ff4f6d)',i:SVG('<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.4 1.2-4 2.4-5.2.3 1.5 1 2.5 2 3C11 8 11.5 5.3 12 3z"/>')},
+ {id:'hm',t:'Homematic IP',c:'linear-gradient(135deg,#22c55e,#0fb5a6)',i:SVG('<path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/>')},
+ {id:'xpm',t:'Expertenmodus',c:'linear-gradient(135deg,#f59e0b,#ef4444)',i:SVG('<path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5"/><circle cx="12" cy="18" r=".8" fill="currentColor"/>')},
+ {id:'outs',xp:1,t:'Gebläse & Ausgänge',c:'linear-gradient(135deg,#0fb5a6,#22c7e8)',i:SVG('<path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/>')},
+ {id:'bg',t:'Hintergrund & Benachrichtigungen',c:'linear-gradient(135deg,#8b5cf6,#ec4899)',i:SVG('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>')},
+ {id:'expert',xp:1,t:'Alle Ofen-Werte',c:'linear-gradient(135deg,#64748b,#334155)',i:SVG('<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>')},
+];
+let setPage=null,CFG={};
+function menuSub(id){try{
+ if(id==='conn')return CFG.ip?'IP '+CFG.ip+' · VPN: '+($('vpnApp').selectedOptions[0]?.textContent||''):'Noch nicht eingerichtet';
+ if(id==='pellet')return 'Früher stoppen '+(CFG.early_stop?'ab '+CFG.early_temp+' °C':'aus')+' · Pelletstart '+(CFG.early_restart?'unter '+(CFG.early_restart_temp||100)+' °C':'aus');
+ if(id==='hm')return HM&&HM.connected?('verbunden'+(HM.ctrl?' · Raumsteuerung an':'')+(HM.valve?' · Heizkörper-Steuerung an':'')):'nicht verbunden';
+ if(id==='outs'){const n=Object.keys(man.names||{}).length;return n?n+' benannt'+(man.fresh_air_bit!=null?' · Frischluftgebläse':''):'noch keine benannt'}
+ if(id==='bg'){const b=JSON.parse(Ofen.bgInfo());return (b.notif_ok?(CFG.notify_state!==false?'Benachrichtigungen + Zustände':'Benachrichtigungen an'):'Benachrichtigungen aus')+' · Akku-Optimierung '+(b.battery_ok?'aus':'an')}
+ if(id==='expert')return 'Jeden Wert einzeln lesen und ändern';
+ if(id==='xpm')return XP?'an – sicherheitsrelevante Funktionen freigeschaltet':'aus';
+}catch(e){}return ''}
+function buildMenu(){$('setMenu').innerHTML=PAGES.filter(p=>XP||!p.xp).map(p=>`<div class="mi" data-p="${p.id}"><div class="mic" style="background:${p.c}">${p.i}</div><div class="mt"><b>${p.t}</b><span>${esc(menuSub(p.id))}</span></div><div class="chev">›</div></div>`).join('');
+ $('setMenu').querySelectorAll('.mi').forEach(m=>m.onclick=()=>openPage(m.dataset.p))}
+function openPage(id,dir){setPage=id;const P=PAGES.find(p=>p.id===id);
+ $('setTitle').textContent=P?P.t:'Einstellungen';$('setMenu').hidden=!!id;
+ document.querySelectorAll('#t-set [data-pg]').forEach(c=>c.hidden=c.dataset.pg!==id);
+ if(id==='pellet'){loadPstop();hopCfgLoad()}if(id==='bg'){bgRefresh();loadCfg()}if(id==='hm')hmLoad();
+ if(!id){loadCfg().then(buildMenu);if(HM===null)hmLoad().then(buildMenu)}
+ const sec=$('t-set');sec.classList.remove('inL','inR');void sec.offsetWidth;sec.classList.add((dir??1)>0?'inL':'inR');window.scrollTo(0,0)}
+/* Funktionen starten / beenden (beenden = bisheriges „App beenden“) */
+let APPON=false;document.body.classList.add('appoff');
+function setAppOn(on){APPON=!!on;document.body.classList.toggle('appoff',!APPON);if(!APPON)setNet('','Funktionen aus');$('fnOn').checked=APPON;if(!APPON&&curTab!=='ofen'&&curTab!=='set')tab('ofen',0)}
+function fnStart(){if(!CFG.ip||!CFG.serial||!CFG.has_pin){toast('Bitte zuerst IP, Seriennummer und PIN eintragen',true);tab('set');openPage('conn');return}
+ try{Ofen.startFunctions()}catch(e){}setAppOn(true);toast('Funktionen gestartet');refresh();manRefresh()}
+function quitApp(){
+ const run=S&&(RUN.includes(S.state)||S.wood_mode)&&!S.halted;
+ if(!confirm('Funktionen beenden?\n\nDie App trennt sich vom Ofen und schließt sich. Überwachung, Warnungen, Raumsteuerung und Heizkörper-Steuerung stoppen; geschlossene Heizkörper gehen zurück auf den Wochenplan. Beim nächsten Öffnen startest du sie wieder mit „Funktionen starten“.'+
+  (run?'\n\nDer Ofen läuft gerade und wird NICHT gestoppt – er regelt dann nur noch nach seinem eigenen Fühler. Zum Stoppen vorher „Ausschalten“.':'')))return false;
+ toast('Funktionen werden beendet …');try{Ofen.quitApp()}catch(e){toast('Beenden nicht möglich',true)}return true}
+$('fnOn').addEventListener('change',()=>{if($('fnOn').checked)return;if(!quitApp())$('fnOn').checked=true});
+function setBack(){if(setPage)openPage(null,-1);else tab(lastMain,-1)}
+
+$('nsOn').addEventListener('change',()=>api('config',{notify_state:$('nsOn').checked}).then(()=>toast($('nsOn').checked?'Zustandsmeldungen an':'Zustandsmeldungen aus')).catch(e=>toast(e.message,true)));
+/* Lang drücken (2 s) auf einen Schieberegler: Zahl eingeben */
+let numEl=null;
+function sliderLabel(el){const sl=el.closest('.slide');let p=sl&&sl.previousElementSibling;
+ while(p&&!(p.tagName==='LABEL'||p.tagName==='H2'))p=p.previousElementSibling;
+ if(p&&p.tagName==='LABEL')return p.textContent.trim();const c=el.closest('.card');const h=c&&c.querySelector('h2');return h?h.textContent.trim():'Wert'}
+const fmtN=(v,st)=>(+v).toFixed(String(st).includes('.')?String(st).split('.')[1].length:0).replace('.',',');
+function numFor(el,title){numEl=el;const mn=+el.min,mx=+el.max,st=el.step||1;
+ $('numTitle').textContent=title||sliderLabel(el);$('numRange').textContent='erlaubt: '+fmtN(mn,st)+' bis '+fmtN(mx,st)+' °C'+(+st!==1?' (Schritte '+fmtN(st,st)+')':'');
+ $('numIn').value=fmtN(el.value,st);$('numErr').textContent='';$('numModal').hidden=false;
+ setTimeout(()=>{$('numIn').focus();$('numIn').select()},60)}
+function numClose(){$('numModal').hidden=true;if(numEl)numEl._lp=false;numEl=null}
+function numOk(){const el=numEl;if(!el)return;const mn=+el.min,mx=+el.max,st=+(el.step||1);
+ const v=parseFloat($('numIn').value.replace(',','.'));
+ if(isNaN(v)){$('numErr').textContent='Bitte eine Zahl eingeben.';return}
+ if(v<mn||v>mx){$('numErr').textContent='Nur '+fmtN(mn,st)+' bis '+fmtN(mx,st)+' möglich.';return}
+ const r=Math.round((v-mn)/st)*st+mn;el._lp=false;el.value=r.toFixed(3);
+ numClose();el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}
+$('numIn').addEventListener('keydown',e=>{if(e.key==='Enter')numOk()});
+// Schutz: Ziehen/Tippen beim langen Drücken soll nichts speichern
+document.addEventListener('input',e=>{const el=e.target;if(el._lp&&el.type==='range'){e.stopImmediatePropagation();el.value=el._orig}},true);
+document.addEventListener('change',e=>{const el=e.target;if(el._lp&&el.type==='range'){e.stopImmediatePropagation();el.value=el._orig}},true);
+document.querySelectorAll('input[type=range]').forEach(el=>{let t=null,x=0,y=0;
+ const cancel=()=>{clearTimeout(t);t=null;el.classList.remove('lp')};
+ el.addEventListener('pointerdown',e=>{el._orig=el.value;x=e.clientX;y=e.clientY;el.classList.add('lp');
+  t=setTimeout(()=>{t=null;el.classList.remove('lp');el._lp=true;el.value=el._orig;try{Ofen.tick()}catch(_){}numFor(el)},2000)});
+ el.addEventListener('pointermove',e=>{if(t&&(Math.abs(e.clientX-x)>10||Math.abs(e.clientY-y)>10))cancel()});
+ el.addEventListener('pointerup',cancel);el.addEventListener('pointercancel',cancel);el.addEventListener('pointerleave',cancel);
+ el.addEventListener('contextmenu',e=>e.preventDefault())});
+
+/* Zieltemperatur direkt in der Raumsteuerung */
+let thTimer=null;
+function thBump(d){const el=$('thT');let v=+el.value||21;v=Math.max(+el.min,Math.min(+el.max,v+d));el.value=v;
+ $('thTarget').textContent=t1(v)+' °C';$('thV').textContent=t1(v)+' °C';
+ clearTimeout(thTimer);thTimer=setTimeout(()=>{thTimer=null;el.dispatchEvent(new Event('change',{bubbles:true}))},1000)}
+
+/* Expertenmodus ein/aus */
+function xpShow(on){$('xpModal').hidden=!on;if(on){$('xpA1').checked=$('xpA2').checked=false;$('xpGo').disabled=true;$('xpModal').querySelector('.box').scrollTop=0}else $('xpOn').checked=XP}
+['xpA1','xpA2'].forEach(id=>$(id).addEventListener('change',()=>$('xpGo').disabled=!($('xpA1').checked&&$('xpA2').checked)));
+async function xpEnable(){try{await api('expert',{on:true,ack:CFG.expert_ver||1});$('xpModal').hidden=true;$('xpOn').checked=true;setXp(true);toast('Expertenmodus an');loadCfg()}catch(e){toast(e.message,true)}}
+$('xpOn').addEventListener('change',async()=>{if($('xpOn').checked){$('xpOn').checked=false;xpShow(true);return}
+ if(!confirm('Expertenmodus ausschalten?\n\nLaufende Bauteile werden abgeschaltet, Raumsteuerung, Pellets früher stoppen und automatischer Pelletstart werden beendet.')){$('xpOn').checked=true;return}
+ try{await api('expert',{on:false});setXp(false);toast('Expertenmodus aus');loadCfg();refresh()}catch(e){$('xpOn').checked=true;toast(e.message,true)}});
+
+/* Aufkleber per Barcode/QR scannen */
+function scanInto(f){try{Ofen.scanCode(f)}catch(e){toast('Scannen geht nur in der App',true)}}
+const fmtSgtin=h=>h.match(/.{4}/g).join('-');
+function scanParse(f,raw){const t=String(raw).trim();
+ if(f==='hmAp'){const h=t.toUpperCase().replace(/[^0-9A-F]/g,''),m=h.match(/3014[0-9A-F]{20}/)||h.match(/[0-9A-F]{24}/);return m?fmtSgtin(m[0]):null}
+ const g=t.match(/\d+/g)||[];if(!g.length)return null;
+ // Schlüsselwörter wie „SN:“ oder „PIN:“ bevorzugen, sonst: Seriennummer = erste Zahl, PIN = längste Zahl
+ const kw=f==='serial'?/(?:s\/?n|serial|serien\w*)\D{0,3}(\d+)/i:/pin\D{0,3}(\d+)/i,k=t.match(kw);if(k)return k[1];
+ return f==='serial'?g[0]:g.slice().sort((a,b)=>b.length-a.length)[0]}
+/* Typenschild per Foto: „Serie No. …“ und „Password: …“ (NBE-Aufkleber) bzw. SGTIN (Homematic) */
+function photoInto(f){try{Ofen.photoText(f)}catch(e){toast('Foto geht nur in der App',true)}}
+window.__photoText=(f,txt,err)=>{if(err){toast(err,true);return}if(txt==null)return;
+ const t=String(txt).replace(/\n/g,' ');
+ const ser=(t.match(/Serie\w*\s*(?:No|Nr|Nummer)?\.?\s*:?\s*(\d{3,})/i)||t.match(/(?:S\/?N|Serial)\D{0,3}(\d{3,})/i)||[])[1];
+ const pw=(t.match(/(?:Pass\s*word|Passw\w*|PIN)\s*:?\s*([0-9OoIl ]{6,})/i)||[])[1];
+ const pin=pw?pw.replace(/[Oo]/g,'0').replace(/[Il]/g,'1').replace(/\s/g,''):null;
+ const got=[];
+ if(ser){$('serial').value=ser;got.push('Seriennummer '+ser)}
+ if(pin&&/^\d{6,}$/.test(pin)){$('pin').value=pin;$('pin').type='text';setTimeout(()=>$('pin').type='password',6000);got.push('Passwort '+pin)}
+ if(!got.length){toast('Auf dem Foto keine Seriennummer und kein Passwort gefunden. Näher heran und scharf fotografieren.',true);return}
+ toast('Gelesen: '+got.join(' · ')+' – bitte prüfen, dann „Speichern“')};
+window.__scanResult=(f,raw,err)=>{if(err){toast(err,true);return}if(raw==null)return;
+ const v=scanParse(f,raw),el=$(f);
+ if(!v){toast('Code gelesen, aber nichts Passendes gefunden: „'+String(raw).slice(0,40)+'“',true);return}
+ el.value=v;el.dispatchEvent(new Event('input'));
+ if(el.type==='password'){el.type='text';setTimeout(()=>el.type='password',4000)}
+ toast('Gelesen: '+v+' – bitte prüfen'+(f==='serial'||f==='pin'||f==='hmPin'?'':''))};
+
+/* Pellet-Füllstand */
+let HOP=null;
+function renderHop(s){const h=s.hopper||{},box=$('hopHome');
+ if(h.kg==null){box.hidden=true;return}box.hidden=false;HOP=h;
+ const cap=+h.cap||13,kg=+h.kg,known=!!h.known;$('hopFull').textContent='Voll ('+t1(cap).replace(',0','')+' kg)';
+ $('hopMark').style.left=Math.min(100,(+h.warn||0)/cap*100)+'%';
+ if(!known){$('hopT').textContent='Füllstand unbekannt – nach dem Nachfüllen eintragen';$('hopFill').style.width='0%';box.classList.remove('low');return}
+ const pct=Math.max(0,Math.min(100,kg/cap*100));$('hopFill').style.width=pct+'%';
+ box.classList.toggle('low',kg<=+h.warn);
+ $('hopT').textContent=t1(Math.max(0,kg)).replace(',0','')+' von '+t1(cap).replace(',0','')+' kg'+(h.hours!=null?' · reicht ca. '+(h.hours>=1?Math.round(h.hours)+' h':Math.round(h.hours*60)+' min'):'')}
+function hopToggle(){const p=$('hopPanel');p.hidden=!p.hidden;if(!p.hidden)api('hopper').then(d=>{$('hopAug').textContent=d.auger||'–'}).catch(()=>{})}
+async function hopFill(kg,add){const cap=HOP?+HOP.cap:13;if(kg==null)kg=cap;
+ if(!(kg>=0)){toast('Bitte eine Menge in kg eingeben',true);return}
+ const txt=add?'+'+kg+' kg nachgefüllt':'Füllstand auf '+kg+' kg setzen';
+ if(!confirm(txt+'?'))return;
+ try{const r=await api('hopper/fill',{kg,add:!!add});toast('Füllstand: '+r.kg+' kg');$('hopPanel').hidden=true;$('hopKg').value='';refresh()}catch(e){toast(e.message,true)}}
+async function hopCfgLoad(){try{const d=await api('hopper');$('hopCap').value=d.cap;$('hopWarn').value=d.warn;$('hopNot').checked=!!d.notify}catch(e){}}
+$('hopCap').addEventListener('change',()=>api('hopper/config',{cap:$('hopCap').value}).then(()=>{toast('Behälter: '+$('hopCap').value+' kg');refresh()}).catch(e=>toast(e.message,true)));
+$('hopWarn').addEventListener('change',()=>api('hopper/config',{warn:$('hopWarn').value}).then(()=>{toast('Warnung ab '+$('hopWarn').value+' kg');refresh()}).catch(e=>toast(e.message,true)));
+$('hopNot').addEventListener('change',()=>api('hopper/config',{notify:$('hopNot').checked}).then(()=>toast($('hopNot').checked?'Füllstand-Meldung an':'Füllstand-Meldung aus')).catch(e=>toast(e.message,true)));
+
+/* Bauteile: was läuft gerade? */
+const PI={
+ fan:'<svg class="spin" viewBox="0 0 24 24" fill="currentColor"><path d="M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm.9-1.9c.5-2.6 2.4-6.1 5.2-5 2.6 1 1.4 4.7-2.8 6.1-.9.3-1.6-.2-2.4-1.1zm1.9 3.8c2.6.5 6.1 2.4 5 5.2-1 2.6-4.7 1.4-6.1-2.8-.3-.9.2-1.6 1.1-2.4zm-3.7 1.9c-.5 2.6-2.4 6.1-5.2 5-2.6-1-1.4-4.7 2.8-6.1.9-.3 1.6.2 2.4 1.1zM9.2 11.1C6.6 10.6 3.1 8.7 4.2 5.9c1-2.6 4.7-1.4 6.1 2.8.3.9-.2 1.6-1.1 2.4z"/></svg>',
+ auger:SVG('<path d="M3 12h18"/><path d="M6 8c2 0 2 8 4 8s2-8 4-8 2 8 4 8"/>'),
+ ign:SVG('<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'),
+ flame:SVG('<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.4 1.2-4 2.4-5.2.3 1.5 1 2.5 2 3C11 8 11.5 5.3 12 3z"/>'),
+ clean:SVG('<path d="M3 21h18"/><path d="M7 21l3-9h4l3 9"/><path d="M12 12V3"/>'),
+ out:SVG('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')};
+let ADV=null,advAt=0;
+function renderParts(s){const st=String(s.state||''),raw=s.raw||{},sub=String(raw.substate??''),ma=+raw.milli_ampere,pp=+raw.power_pct;
+ const wood=!!s.wood_mode,pellet=['2','4','5','6','32'].includes(st),P=[];
+ // Abgasgebläse: Stromaufnahme verrät es am zuverlässigsten
+ let fOn=false,fW='';
+ if(!isNaN(ma)){fOn=ma>120;fW='Stromaufnahme '+ma+' mA'}else{fOn=pellet;fW='nach Zustand'}
+ if(fOn&&!pellet)fW+=wood?' · Holzbetrieb':' · Nachlauf';
+ /* Der Hybrid hat nur EIN Gebläse – der benannte „Frischluft“-Ausgang schaltet dasselbe Gebläse von Hand */
+ const fb=man.fresh_air_bit,fk=fb==null?null:String(fb),fMan=fk!=null&&fk in (man.running||{});
+ if(fMan){fOn=true;const r=man.running[fk];fW='von Hand'+(r==null?' bis Stopp':' · noch '+fmt(r))+(isNaN(ma)?'':' · '+ma+' mA')}
+ P.push({n:'Gebläse',i:'fan',f:fMan?1:0,on:fOn,s:fOn?(fMan?'läuft (Handbetrieb)':'läuft'):'aus',w:fW});
+ // Pelletschnecke
+ let aOn=false,aS='aus',aW=wood?'Holzbetrieb – keine Pellets':'';
+ if(sub==='2'){aOn=true;aS='Startbefüllung';aW='füllt den Brenner vor der Zündung'}
+ else if(['5','32'].includes(st)){aOn=true;aS='taktet';aW='fördert Pellets'+(!isNaN(pp)?' · Leistung '+pp+' %':'')}
+ else if(st==='6'){aOn='half';aS='gedrosselt';aW='Raumtemperatur erreicht'+(!isNaN(pp)?' · '+pp+' %':'')}
+ P.push({n:'Pelletschnecke',i:'auger',on:aOn,s:aS,w:aW});
+ // Zünder
+ const zOn=sub==='4'||st==='4';
+ P.push({n:'Zünder',i:'ign',on:zOn,s:zOn?'glüht':'aus',w:zOn?(st==='4'?'2. Zündversuch':'Zündung läuft'):(st==='13'?'Zündung fehlgeschlagen':'')});
+ // Feuer
+ const fire=pellet&&!['2','4'].includes(st)||wood;
+ P.push({n:'Feuer',i:'flame',on:fire?true:(['2','4'].includes(st)?'half':false),s:wood?'Holz':fire?'Pellets':['2','4'].includes(st)?'zündet':'aus',w:'Rauchgas '+num(s.smoke_temp)+' °C'});
+ // Reinigung
+ const cOn=sub==='6';P.push({n:'Reinigung',i:'clean',on:cOn,s:cOn?'läuft':'aus',w:''});
+ // benannte Ausgänge (Handbetrieb), z. B. Frischluftgebläse
+ for(const [o,nm] of Object.entries(man.names||{})){const k=String(+o-1),on=k in (man.running||{});if(k===fk)continue;
+  P.push({n:nm,i:'out',f:1,on,s:on?(man.running[k]==null?'läuft':'läuft · '+fmt(man.running[k])):'aus',w:'Ausgang '+o+' · von der App geschaltet'})}
+ $('partGrid').innerHTML=P.map(p=>`<div class="pt${p.on===true?' on':p.on==='half'?' half':''}${p.f?' f':''}"><div class="pi">${PI[p.i]}</div><b>${esc(p.n)}</b><div class="ps">${esc(p.s)}</div>${p.w?'<div class="pw">'+esc(p.w)+'</div>':''}</div>`).join('');
+ const V=[['Zustand',s.state_text+(s.substate_text&&s.substate_text!=='normal'?' · '+s.substate_text:'')],['Rauchgas',num(s.smoke_temp)+' °C'],['Fallschacht',num(s.shaft_temp)+' °C'],
+  ['Leistung',(isNaN(pp)?'–':pp+' %')+' · '+num(s.power_kw,1)+' kW'],['Sauerstoff',num(s.oxygen,1)+' %'],['Stromaufnahme',isNaN(ma)?'–':ma+' mA'],['Lichtsensor',raw.photo_level??'–']];
+ $('partVals').innerHTML=V.map(v=>`<div class="mrow"><span>${v[0]}</span><b>${esc(v[1])}</b></div>`).join('');
+ if(curTab==='parts'&&Date.now()-advAt>9000){advAt=Date.now();api('advanced').then(a=>{ADV=a;showRaw(s)}).catch(()=>{ADV={};showRaw(s)})}else showRaw(s)}
+function showRaw(s){const r=s.raw||{},a=ADV||{};const line=(o)=>Object.keys(o).sort().map(k=>esc(k)+' = '+esc(o[k])).join('<br>');
+ $('partRaw').innerHTML='<b>Betriebsdaten</b><br>'+line(r)+(Object.keys(a).length?'<br><br><b>Erweiterte Daten</b><br>'+line(a):'')}
+
+/* Hintergrund */
+function bgRefresh(){try{const b=JSON.parse(Ofen.bgInfo());
+ $('bgBatT').textContent=b.battery_ok?'Aus – die Überwachung wird nicht gebremst.':'An – Android kann die Überwachung anhalten.';$('bgBatB').hidden=b.battery_ok;
+ $('bgNotT').textContent=b.notif_ok?'Erlaubt – Warnungen kommen auch auf die Uhr.':'Nicht erlaubt – keine Warnungen.';$('bgNotB').hidden=b.notif_ok;
+ $('ver').textContent='Version '+b.version}catch(e){}}
+window.onAppResume=()=>{bgRefresh();refresh()};
+window.goBack=()=>{if(curTab==='set'){setBack();return true}if(curTab!=='ofen'){tab('ofen',-1);return true}return false};
+
+/* Start */
+let t0='ofen';try{t0=localStorage.getItem('tab')||'ofen'}catch(e){}applyHm();tab(mainTabs().includes(t0)?t0:'ofen',0);
+buildNames();selChips();manRefresh();setInterval(()=>{if(!document.hidden)manRefresh()},1000);
+loadCfg(true).then(()=>{if(APPON)refresh()});
+</script></body></html>

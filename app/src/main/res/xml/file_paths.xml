@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Foto vom Typenschild für die Texterkennung (nur kurz im Cache) -->
+    <cache-path name="label" path="." />
+</paths>

@@ -1,0 +1,56 @@
+name: APK bauen
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Signier-Passwort prüfen
+        env:
+          OFEN_KEY_PASSWORD: ${{ secrets.OFEN_KEY_PASSWORD }}
+        run: |
+          if [ -z "$OFEN_KEY_PASSWORD" ]; then
+            echo "::error::Secret OFEN_KEY_PASSWORD fehlt (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+
+      - name: APK bauen
+        env:
+          OFEN_KEY_PASSWORD: ${{ secrets.OFEN_KEY_PASSWORD }}
+        run: gradle :app:assembleRelease --no-daemon --stacktrace
+
+      - name: APK umbenennen
+        run: cp app/build/outputs/apk/release/app-release.apk HDR-Aduro.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HDR-Aduro-APK
+          path: HDR-Aduro.apk
+
+      # Immer die neueste Version unter "Releases" -> leicht auf dem Handy herunterladbar
+      - name: Release aktualisieren
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "HDR Aduro (Build ${{ github.run_number }})"
+          body: "Neueste Version. Auf dem Handy HDR-Aduro.apk antippen und installieren. Inoffiziell – Nutzung auf eigene Gefahr."
+          files: HDR-Aduro.apk
+          make_latest: true
