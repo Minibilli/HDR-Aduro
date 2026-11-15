@@ -65,6 +65,11 @@ object Stove {
         return try {
             Nbe.send(ip, ser, pin, fn, payload)
         } catch (e: SocketTimeoutException) {
+            // IP geändert? (Router vergibt dynamisch) -> im WLAN nach der Seriennummer suchen und einmal neu versuchen
+            if (rediscover()) {
+                val (ip2, _, _) = need()
+                try { return Nbe.send(ip2, ser, pin, fn, payload) } catch (e2: Exception) { }
+            }
             throw StoveError("Ofen antwortet nicht (Zeitüberschreitung)")
         } catch (e: StoveError) {
             throw e
@@ -93,29 +98,102 @@ object Stove {
         if (r.status != 0) throw StoveError("Ofen hat '$path = $value' abgelehnt (Status ${r.status})")
     }
 
-    fun discover(): JSONObject {
-        val c = cfg()
-        if (c.optString("ip").isNotBlank() && routeInfo().optString("route") != "wlan")
-            throw StoveError("„Ofen suchen“ geht nur im Heim-WLAN. Über VPN wird die gespeicherte IP verwendet.")
-        val r = try {
-            Nbe.send("255.255.255.255", "<serial>", "<pin>", Nbe.FN_DISCOVER, "NBE Discovery")
-        } catch (e: Exception) {
-            throw StoveError("Kein Ofen im WLAN gefunden. Ist das Handy im selben Netz wie der Ofen?")
-        }
-        val kv = Nbe.kv(r.payload)
-        var ip = r.address
-        var serial = r.serial.trimStart('0').ifBlank { r.serial }
-        for ((k, v) in kv) {
-            val kl = k.lowercase()
-            if (kl.contains("serial") && v.isNotBlank()) serial = v
-            if ((kl == "ip" || kl == "stoveip" || kl == "ip_address") && v.isNotBlank()) ip = v
-        }
-        if (ip.isBlank()) throw StoveError("Kein Ofen im WLAN gefunden.")
-        c.put("ip", ip); c.put("serial", serial); saveCfg(c)
-        return JSONObject().put("ip", ip).put("serial", serial)
+    // ------------------------------------------------------------------ Ofen im WLAN finden
+    /** Broadcast-Adressen der WLAN-Netze (z. B. 192.168.50.255) plus 255.255.255.255 */
+    private fun broadcastAddrs(): List<String> {
+        val out = mutableListOf<String>()
+        try {
+            val cm = ctx.getSystemService(ConnectivityManager::class.java)
+            @Suppress("DEPRECATION")
+            for (n in cm.allNetworks) {
+                val caps = cm.getNetworkCapabilities(n) ?: continue
+                if (!caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) continue
+                for (la in cm.getLinkProperties(n)?.linkAddresses ?: emptyList()) {
+                    val b = la.address.address
+                    if (b.size != 4) continue
+                    val pl = la.prefixLength.coerceIn(8, 30)
+                    val ip = ((b[0].toInt() and 255) shl 24) or ((b[1].toInt() and 255) shl 16) or ((b[2].toInt() and 255) shl 8) or (b[3].toInt() and 255)
+                    val bc = ip or ((1 shl (32 - pl)) - 1)
+                    out += "${(bc ushr 24) and 255}.${(bc ushr 16) and 255}.${(bc ushr 8) and 255}.${bc and 255}"
+                }
+            }
+        } catch (e: Exception) { }
+        out += "255.255.255.255"
+        return out.distinct()
     }
 
-    // ------------------------------------------------------------------ Netz
+    private fun normSerial(s: String) = s.trim().trimStart('0').ifBlank { s.trim() }
+
+    /** Alle Öfen, die im WLAN auf den Rundruf antworten: Liste aus (IP, Seriennummer) */
+    fun scan(): List<Pair<String, String>> =
+        Nbe.discoverAll(broadcastAddrs()).map { r ->
+            var ip = r.address
+            var serial = normSerial(r.serial)
+            for ((k, v) in Nbe.kv(r.payload)) {
+                val kl = k.lowercase()
+                if (kl.contains("serial") && v.isNotBlank()) serial = normSerial(v)
+                if ((kl == "ip" || kl == "stoveip" || kl == "ip_address") && v.isNotBlank()) ip = v
+            }
+            ip to serial
+        }.filter { it.first.isNotBlank() }.distinctBy { it.first }
+
+    /** „Ofen suchen“: gefundene Öfen auflisten (speichert nichts) */
+    fun discover(): JSONObject {
+        val list = try { scan() } catch (e: Exception) { emptyList() }
+        if (list.isEmpty()) throw StoveError("Kein Ofen im WLAN gefunden. Ist das Handy im selben WLAN wie der Ofen (VPN aus)?")
+        val arr = org.json.JSONArray()
+        list.forEach { arr.put(JSONObject().put("ip", it.first).put("serial", it.second)) }
+        val mine = normSerial(cfg().optString("serial"))
+        val best = list.firstOrNull { it.second == mine } ?: list.first()
+        return JSONObject().put("ip", best.first).put("serial", best.second).put("all", arr)
+    }
+
+    /** Einrichtung in einem Schritt: Ofen mit dieser Seriennummer im WLAN suchen, IP übernehmen, Verbindung prüfen */
+    fun setup(serial0: String, pin: String): JSONObject {
+        val c = cfg()
+        val serial = normSerial(serial0.ifBlank { c.optString("serial") })
+        val pinUse = pin.ifBlank { c.optString("pin") }
+        val list = try { scan() } catch (e: Exception) { emptyList() }
+        val hit = list.firstOrNull { serial.isNotBlank() && it.second == serial }
+            ?: (if (serial.isBlank() && list.size == 1) list.first() else null)
+        if (hit == null) {
+            val msg = when {
+                list.isEmpty() -> "Kein Ofen im WLAN gefunden. Handy ins Heim-WLAN (VPN aus) und Ofen eingeschaltet?"
+                else -> "Im WLAN antwortet ${list.joinToString { "Ofen ${it.second} (${it.first})" }} – aber nicht Seriennummer $serial. Seriennummer prüfen."
+            }
+            throw StoveError(msg)
+        }
+        val ser = hit.second
+        if (pinUse.isBlank()) throw StoveError("Ofen $ser gefunden (${hit.first}), aber das Passwort fehlt.")
+        val ok = try {
+            Nbe.send(hit.first, ser, pinUse, Nbe.FN_OPERATING, "*").status == 0
+        } catch (e: Exception) { false }
+        if (!ok) throw StoveError("Ofen $ser gefunden (${hit.first}), aber er nimmt das Passwort nicht an. Passwort prüfen.")
+        c.put("ip", hit.first).put("serial", ser).put("pin", pinUse); saveCfg(c)
+        return JSONObject().put("ip", hit.first).put("serial", ser)
+    }
+
+    /** Dynamische IP: antwortet der Ofen nicht, im WLAN nach seiner Seriennummer suchen und neue IP übernehmen.
+     *  Höchstens alle 2 min; geht nur, wenn das Handy im selben WLAN ist (nicht über VPN). */
+    @Volatile private var lastRediscover = 0L
+    private fun rediscover(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastRediscover < 2 * 60_000L) return false
+        lastRediscover = now
+        val c = cfg()
+        val ser = normSerial(c.optString("serial"))
+        if (ser.isBlank()) return false
+        val hit = try { scan().firstOrNull { it.second == ser } } catch (e: Exception) { null } ?: return false
+        val old = c.optString("ip")
+        if (hit.first == old) return false
+        c.put("ip", hit.first).put("ip_changed_at", now).put("ip_old", old); saveCfg(c)
+        try {
+            if (c.optBoolean("notify_state", true))
+                Notifier.stateChange(ctx, "Ofen hat eine neue IP-Adresse", "$old → ${hit.first} – von der App automatisch übernommen.")
+        } catch (e: Exception) { }
+        return true
+    }
+
     fun routeInfo(): JSONObject {
         val ip = cfg().optString("ip")
         var vpn = false

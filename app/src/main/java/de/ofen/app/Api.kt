@@ -41,6 +41,7 @@ object Api {
                 .put("early_restart_temp", c.optInt("early_restart_temp", 100))
                 .put("notify_state", c.optBoolean("notify_state", true))
                 .put("auto_power", c.optBoolean("auto_power"))
+                .put("ip_changed_at", c.optLong("ip_changed_at")).put("ip_old", c.optString("ip_old"))
                 .put("expert", c.optBoolean("expert")).put("expert_ver", Stove.EXPERT_TEXT_VERSION)
                 .put("hm", Hmip.connected()))
         }
@@ -108,6 +109,7 @@ object Api {
                 return ok()
             }
             "discover" -> return ok(Stove.discover())
+            "setup" -> return ok(Stove.setup(b.optString("serial").trim(), b.optString("pin").trim()))
             "start" -> { Stove.resume(); return ok() }
             "stop" -> { Stove.halt(); return ok(JSONObject().put("halted", true)) }
             "power" -> {

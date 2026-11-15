@@ -86,8 +86,54 @@ class MainActivity : Activity() {
         web.post { web.evaluateJavascript(js, null) }
     }
 
+    // ------------------------------------------------------------------ Eigenes Foto als Hintergrund der Statuskarte
+    private val REQ_BG = 4712
+    private var bgUri: Uri? = null
+    private fun bgFile() = File(filesDir, "hintergrund.jpg")
+
+    private fun bgDataUrl(): String {
+        val f = bgFile()
+        if (!f.exists()) return ""
+        return "data:image/jpeg;base64," + android.util.Base64.encodeToString(f.readBytes(), android.util.Base64.NO_WRAP)
+    }
+
+    private fun bgReply(error: String?) {
+        val js = "window.__bgSet&&__bgSet(${JSONObject.quote(if (error == null) bgDataUrl() else "")},${if (error == null) "null" else JSONObject.quote(error)})"
+        web.post { web.evaluateJavascript(js, null) }
+    }
+
+    /** Foto laden, nach EXIF drehen, auf max. 1280 px verkleinern, als JPEG speichern */
+    private fun bgSave(uri: Uri) {
+        val opts = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, opts) }
+        var sample = 1
+        while (maxOf(opts.outWidth, opts.outHeight) / (sample * 2) >= 1280) sample *= 2
+        val bmp0 = contentResolver.openInputStream(uri)?.use {
+            android.graphics.BitmapFactory.decodeStream(it, null, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
+        } ?: throw IllegalStateException("kein Bild")
+        val rot = try {
+            contentResolver.openInputStream(uri)?.use {
+                when (android.media.ExifInterface(it).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1)) {
+                    6 -> 90f; 3 -> 180f; 8 -> 270f; else -> 0f
+                }
+            } ?: 0f
+        } catch (e: Exception) { 0f }
+        val scale = minOf(1f, 1280f / maxOf(bmp0.width, bmp0.height))
+        val m = android.graphics.Matrix().apply { postScale(scale, scale); postRotate(rot) }
+        val bmp = android.graphics.Bitmap.createBitmap(bmp0, 0, 0, bmp0.width, bmp0.height, m, true)
+        bgFile().outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 82, it) }
+    }
+
     @Deprecated("Activity-API")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == REQ_BG) {
+            if (resultCode != RESULT_OK) return
+            val uri = data?.data ?: bgUri ?: return
+            Thread {
+                try { bgSave(uri); bgReply(null) } catch (e: Exception) { bgReply("Foto konnte nicht gelesen werden (${e.javaClass.simpleName})") }
+            }.start()
+            return
+        }
         if (requestCode != REQ_PHOTO) { super.onActivityResult(requestCode, resultCode, data); return }
         if (resultCode != RESULT_OK) { photoReply(null, null); return }
         val uri = data?.data ?: photoUri ?: run { photoReply(null, "Kein Foto erhalten"); return }
@@ -168,6 +214,30 @@ class MainActivity : Activity() {
                 }
             }
         }
+
+        /** Hintergrundfoto: Kamera oder Galerie; Ergebnis per window.__bgSet(dataUrl, fehler) */
+        @JavascriptInterface
+        fun pickBackground() {
+            runOnUiThread {
+                try {
+                    val file = File(cacheDir, "hintergrund_neu.jpg").apply { delete() }
+                    val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.files", file)
+                    bgUri = uri
+                    val cam = Intent(MediaStore.ACTION_IMAGE_CAPTURE).putExtra(MediaStore.EXTRA_OUTPUT, uri)
+                        .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    val pick = Intent(Intent.ACTION_GET_CONTENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE)
+                    val chooser = Intent.createChooser(pick, "Foto für den Hintergrund").putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(cam))
+                    @Suppress("DEPRECATION")
+                    startActivityForResult(chooser, REQ_BG)
+                } catch (e: Exception) { bgReply("Kamera/Galerie nicht verfügbar (${e.javaClass.simpleName})") }
+            }
+        }
+
+        @JavascriptInterface
+        fun backgroundPhoto(): String = try { bgDataUrl() } catch (e: Exception) { "" }
+
+        @JavascriptInterface
+        fun clearBackground() { bgFile().delete() }
 
         /** Typenschild fotografieren (oder Foto wählen) und Text erkennen; Ergebnis per window.__photoText(feld, text, fehler) */
         @JavascriptInterface

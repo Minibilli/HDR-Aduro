@@ -97,6 +97,32 @@ object Nbe {
         throw SocketTimeoutException()
     }
 
+    /** Rundruf „NBE Discovery“ an alle angegebenen Adressen; sammelt alle Antworten bis zum Zeitablauf */
+    fun discoverAll(addresses: List<String>, timeoutMs: Int = 2500): List<NbeResponse> {
+        seq = (seq + 1) % 99
+        val data = buildFrame("<serial>", "<pin>", FN_DISCOVER, "NBE Discovery", seq).toByteArray(CS)
+        val out = LinkedHashMap<String, NbeResponse>()
+        openSocket(timeoutMs).use { sock ->
+            for (a in addresses.distinct()) try {
+                sock.send(DatagramPacket(data, data.size, InetAddress.getByName(a), PORT))
+            } catch (e: Exception) { }
+            val buf = ByteArray(4096)
+            val deadline = System.currentTimeMillis() + timeoutMs
+            while (true) {
+                val left = deadline - System.currentTimeMillis()
+                if (left <= 0) break
+                sock.soTimeout = left.toInt()
+                val pkt = DatagramPacket(buf, buf.size)
+                try { sock.receive(pkt) } catch (e: SocketTimeoutException) { break }
+                try {
+                    val r = parseResponse(String(pkt.data, 0, pkt.length, CS), pkt.address?.hostAddress ?: "")
+                    if (r.address.isNotBlank()) out[r.address] = r
+                } catch (e: Exception) { }
+            }
+        }
+        return out.values.toList()
+    }
+
     /** "a=1;b=2" -> Map */
     fun kv(payload: String): Map<String, String> =
         payload.split(';').mapNotNull {

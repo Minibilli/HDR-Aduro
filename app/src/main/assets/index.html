@@ -167,7 +167,16 @@ body.inset .dots{display:none}
 .mrow b{font-variant-numeric:tabular-nums}
 .raw{font:12.5px/1.5 ui-monospace,monospace;overflow-wrap:anywhere;color:var(--mute);margin-top:10px}
 .seg.ctl{margin-top:14px}.seg.ctl[hidden]{display:none}.seg.ctl button{padding:9px 6px;font-size:13.5px}
-#vlBox[hidden],#valveHome[hidden],#vpnHome[hidden]{display:none}
+#vlBox[hidden],#valveHome[hidden],#vpnHome[hidden],#ctlGrid[hidden],#thHome[hidden]{display:none}
+.ctlGrid .rt{cursor:pointer}.ctlGrid .rv{font-size:26px}.ctlGrid .rv small{font-size:14px}.ctlGrid .rs{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.rt.cold{background:linear-gradient(135deg,#3b82f6,#06b6d4);color:#fff}.rt.cold .rs{color:rgba(255,255,255,.88)}
+.hero{overflow:hidden;isolation:isolate}.heroPh{position:absolute;inset:0;background:center/cover no-repeat;opacity:.42;mix-blend-mode:luminosity;z-index:-1;pointer-events:none}.heroPh[hidden]{display:none}
+.hero[data-mode=err] .heroPh,.hero[data-mode=off] .heroPh{mix-blend-mode:normal;opacity:.22}
+.hero.ph .big,.hero.ph .blabel,.hero.ph .chip{text-shadow:0 1px 8px rgba(0,0,0,.35)}
+.setupBtn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:4px}.setupBtn svg{width:22px;height:22px}
+.found{display:flex;flex-direction:column;gap:8px;margin-top:10px}.found button{text-align:left;font-weight:600}.found button small{display:block;color:var(--mute);font-weight:500;font-size:12.5px}
+.okbox{margin-top:12px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--go) 14%,transparent);font-weight:600;font-size:14px}.okbox.bad{background:color-mix(in srgb,var(--bad) 14%,transparent)}.okbox[hidden]{display:none}
+.bgprev{height:120px;border-radius:16px;background:var(--soft) center/cover no-repeat;margin:4px 0 12px;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:13.5px}
 .quit{width:100%;margin:4px 0 14px;background:var(--card);color:var(--bad);box-shadow:var(--shadow)}.quit[hidden]{display:none}
 /* Countdown Gebläse (Handbetrieb) oben rechts in der Statuskarte */
 .fanbadge{position:absolute;top:12px;right:12px;width:82px;height:82px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
@@ -206,7 +215,7 @@ body.noxp .xp{display:none!important}
 .scan svg{width:24px;height:24px}
 /* Funktionen starten/beenden */
 .fnbar{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:18px;padding:10px 14px;margin-bottom:12px;box-shadow:var(--shadow)}
-.apRow{margin:-4px 0 14px}.apRow span{font-size:12.5px}
+.apRow{margin:4px 0 14px}.apRow span{font-size:12.5px}
 .fnbar b{font-size:15px}.fnbar span{font-size:12.5px;color:var(--go);font-weight:700}.fnbar .sw{margin-left:auto}
 .fnbar .sw input:checked+i{background:linear-gradient(135deg,#12c99b,#0fb5a6)}
 .offcard{background:var(--card);border-radius:24px;padding:24px 20px;box-shadow:var(--shadow);text-align:center}
@@ -235,7 +244,7 @@ body:not(.appoff) #offCard{display:none}
     <button class="power" style="margin:0" onclick="fnStart()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/></svg>Funktionen starten</button>
   </div>
   <div class="fnbar" id="fnBar"><b>Funktionen</b><span>laufen</span><label class="sw"><input type="checkbox" id="fnOn" checked><i></i></label></div>
-  <div class="hero" id="hero" data-mode="err">
+  <div class="hero" id="hero" data-mode="err"><div class="heroPh" id="heroPh" hidden></div>
     <span class="chip"><i></i><span id="state">Verbinde …</span></span>
     <div class="fanbadge" id="fanBadge" hidden onclick="tab('fan')" title="Gebläse läuft von Hand">
       <svg class="ring" viewBox="0 0 100 100"><defs><linearGradient id="fanGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22c7e8"/><stop offset="1" stop-color="#0fb5a6"/></linearGradient></defs>
@@ -272,10 +281,9 @@ body:not(.appoff) #offCard{display:none}
     <div class="step"><button onclick="bump(-1)">−</button><div class="v"><span id="tv">–</span><small id="tvL">Raum-Zieltemperatur</small></div><button onclick="bump(1)">+</button></div>
   </div>
   <div id="homeFan"></div>
-  <div class="thline homeTh" id="thHome" hidden onclick="tab('rooms')"></div>
   <div class="warn" id="vpnHome" hidden><b>Du bist im Heim-WLAN, aber das VPN ist noch an.</b> Die App spricht den Ofen dann über den Tunnel an statt direkt – das ist langsamer und störanfälliger. Am besten in WG Tunnel dein WLAN als vertrauenswürdig eintragen, dann geht das VPN zu Hause von selbst aus.
     <a class="btn" id="vpnHomeBtn" href="#" style="margin-top:10px">VPN-App öffnen</a></div>
-  <div class="thline homeTh" id="valveHome" hidden onclick="tab('set');openPage('hm')"></div>
+  <div class="rgrid ctlGrid" id="ctlGrid" hidden><div class="rt" id="thHome" hidden onclick="tab('rooms')"></div><div class="rt" id="valveHome" hidden onclick="tab('set');openPage('hm')"></div></div>
   <p class="mute upd" id="upd"></p>
 </section>
 
@@ -336,12 +344,26 @@ body:not(.appoff) #offCard{display:none}
   <div class="card menu" id="setMenu"></div>
   <div class="card" data-pg="conn">
     <h2>Ofen</h2>
-    <p class="mute" style="margin-top:0">Für Aduro-Hybrid-Öfen (H1, H2, H3 Lux, H4 Lux, H5, H6 Lux) mit NBE-Steuerung. <b>Getestet mit einem Aduro H1.</b> Seriennummer per <b>QR-Code</b> scannen, Seriennummer und Passwort per <b>Foto vom Typenschild</b> (Kamera-Symbol beim PIN-Feld) übernehmen.</p>
+    <p class="mute" style="margin-top:0">Für Aduro-Hybrid-Öfen (H1, H2, H3 Lux, H4 Lux, H5, H6 Lux) mit NBE-Steuerung. <b>Getestet mit einem Aduro H1.</b></p>
+    <button class="fire setupBtn" onclick="setupPhoto()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>Mit einem Foto einrichten</button>
+    <p class="mute" style="margin:8px 0 0;font-size:13px">Den NBE-Aufkleber mit <b>Serie No.</b> und <b>Password</b> fotografieren (Handy im Heim-WLAN). Die App liest beides, sucht den Ofen im WLAN und verbindet sich – IP eintippen ist nicht nötig.</p>
+    <div class="okbox" id="connRes" hidden></div>
+    <button style="width:100%;margin-top:12px" onclick="disc()">Ofen im WLAN suchen</button>
+    <div class="found" id="foundList"></div>
+    <details id="connMan" style="margin-top:14px"><summary>Von Hand eingeben</summary>
     <label>IP-Adresse des Ofens</label><input id="ip" inputmode="decimal" placeholder="192.168.1.50">
     <label>Seriennummer</label><div class="inscan"><input id="serial" inputmode="numeric"><button type="button" class="scan" onclick="scanInto('serial')" title="Mit der Kamera scannen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M17 8v8"/></svg></button></div>
     <label>PIN (Aufkleber am Ofen)</label><div class="inscan"><input id="pin" type="password" inputmode="numeric" placeholder="leer lassen = unverändert"><button type="button" class="scan" onclick="photoInto('pin')" title="Typenschild fotografieren"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg></button></div>
+    </details>
     <label>VPN-App für unterwegs</label><select id="vpnApp"><option value="com.zaneschepke.wireguardautotunnel">WG Tunnel</option><option value="com.wireguard.android">WireGuard</option></select>
-    <div class="row" style="margin-top:16px"><button onclick="disc()">Ofen suchen</button><button class="fire" onclick="saveCfg()">Speichern</button></div>
+    <button class="fire" style="width:100%;margin-top:16px" onclick="saveCfg()">Speichern</button>
+    <p class="mute" style="margin-bottom:0;font-size:13px"><b>Wechselnde IP-Adresse:</b> Antwortet der Ofen nicht mehr, sucht die App ihn im Heim-WLAN anhand der Seriennummer und übernimmt die neue IP von selbst<span id="ipChg"></span>. Unterwegs über VPN geht das nicht – deshalb am besten im Router eine feste IP vergeben (FRITZ!Box: Heimnetz → Netzwerk → Ofen bearbeiten → „Diesem Netzwerkgerät immer die gleiche IPv4-Adresse zuweisen“).</p>
+  </div>
+  <div class="card" data-pg="look">
+    <h2>Foto in der Statuskarte</h2>
+    <p class="mute" style="margin-top:0">Ein eigenes Foto, z. B. von deinem Ofen, erscheint dezent hinter der großen Statuskarte. Es bleibt nur auf diesem Handy.</p>
+    <div class="bgprev" id="bgPrev">kein Foto</div>
+    <div class="row"><button class="fire" onclick="bgPick()">Foto wählen</button><button id="bgDel" onclick="bgClear()">Entfernen</button></div>
   </div>
   <div class="card" id="bgCard" data-pg="bg">
     <h2>Hintergrund-Überwachung</h2>
@@ -518,7 +540,7 @@ const mainTabs=()=>['ofen'].concat(hmOn?['rooms']:[],XP?['fan']:[],['parts']);
 function applyHm(){$('nb-rooms').hidden=!hmOn;
  const MAIN=mainTabs();$('dots').innerHTML=MAIN.map(()=>'<i></i>').join('');
  document.querySelectorAll('#dots i').forEach((d,i)=>d.classList.toggle('on',MAIN[i]===curTab));
- if(!hmOn){$('thHome').hidden=true;if(lastMain==='rooms')lastMain='ofen';if(curTab==='rooms')tab('ofen',0)}}
+ if(!hmOn){$('thHome').hidden=true;ctlTiles();if(lastMain==='rooms')lastMain='ofen';if(curTab==='rooms')tab('ofen',0)}}
 function setHm(on){on=!!on;if(on===hmOn)return;hmOn=on;try{localStorage.setItem('hm',on?'1':'0')}catch(e){}applyHm();if(curTab==='set'&&!setPage)buildMenu()}
 function tab(n,dir){const MAIN=mainTabs();if(!MAIN.includes(n)&&n!=='set')n='ofen';const prev=curTab;curTab=n;if(MAIN.includes(n))lastMain=n;if(n==='set'&&prev!=='set'){setPage=null;openPage(null)}
  for(const t of ['ofen','fan','rooms','parts','set']){$('t-'+t).hidden=t!==n;const nb=$('nb-'+t);if(nb)nb.classList.toggle('on',t===n)}
@@ -689,11 +711,30 @@ $('woodMin').addEventListener('input',()=>$('woodV').textContent=$('woodMin').va
 $('woodMin').addEventListener('change',()=>{api('config',{wood_min:$('woodMin').value}).then(()=>toast('Warnung unter '+$('woodMin').value+' °C')).catch(e=>toast(e.message,true))});
 $('reT').addEventListener('input',()=>$('reV').textContent=$('reT').value+' °C');
 $('reT').addEventListener('change',()=>{api('config',{early_restart_temp:$('reT').value}).then(()=>toast('Pelletstart unter '+$('reT').value+' °C')).catch(e=>toast(e.message,true))});
-async function loadCfg(first){try{const c=await api('config');CFG=c;setAppOn(c.app_on);setHm(c.hm);setXp(c.expert);$('xpOn').checked=!!c.expert;$('nsOn').checked=c.notify_state!==false;$('apOn').checked=!!c.auto_power;$('woodV').textContent=(c.wood_min||150)+' °C';$('reT').value=c.early_restart_temp||100;$('reV').textContent=(c.early_restart_temp||100)+' °C';$('reBox').hidden=!c.early_restart;$('esOn').checked=!!c.early_stop;$('esRe').checked=!!c.early_restart;$('esT').value=c.early_temp||240;$('esV').textContent=(c.early_temp||240)+' °C';esShow();$('ip').value=c.ip||'';$('serial').value=c.serial||'';$('woodMin').value=c.wood_min||150;
+async function loadCfg(first){try{const c=await api('config');CFG=c;$('ipChg').textContent=c.ip_changed_at?' (zuletzt am '+new Date(c.ip_changed_at).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+': '+(c.ip_old||'?')+' → '+c.ip+')':'';setAppOn(c.app_on);setHm(c.hm);setXp(c.expert);$('xpOn').checked=!!c.expert;$('nsOn').checked=c.notify_state!==false;$('apOn').checked=!!c.auto_power;$('woodV').textContent=(c.wood_min||150)+' °C';$('reT').value=c.early_restart_temp||100;$('reV').textContent=(c.early_restart_temp||100)+' °C';$('reBox').hidden=!c.early_restart;$('esOn').checked=!!c.early_stop;$('esRe').checked=!!c.early_restart;$('esT').value=c.early_temp||240;$('esV').textContent=(c.early_temp||240)+' °C';esShow();$('ip').value=c.ip||'';$('serial').value=c.serial||'';$('woodMin').value=c.wood_min||150;
  vpnApp=c.vpn_app||vpnApp;$('vpnApp').value=vpnApp;if(first&&(!c.ip||!c.serial||!c.has_pin)){tab('set');openPage('conn')}}catch(e){}}
 async function saveCfg(){try{await api('config',{ip:$('ip').value,serial:$('serial').value,pin:$('pin').value,vpn_app:$('vpnApp').value});
  vpnApp=$('vpnApp').value;$('pin').value='';toast('Gespeichert');refresh()}catch(e){toast(e.message,true)}}
-async function disc(){toast('Suche Ofen im WLAN …');try{const f=await api('discover',{});$('ip').value=f.ip||'';$('serial').value=f.serial||'';toast('Gefunden: '+f.ip)}catch(e){toast(e.message,true)}}
+function ctlTiles(){const a=!$('thHome').hidden,b=!$('valveHome').hidden;$('ctlGrid').hidden=!a&&!b;$('thHome').classList.toggle('wide',a&&!b);$('valveHome').classList.toggle('wide',b&&!a)}
+function connMsg(t,bad){const r=$('connRes');r.hidden=!t;r.classList.toggle('bad',!!bad);r.textContent=t||''}
+async function disc(){toast('Suche Ofen im WLAN …');$('foundList').innerHTML='';connMsg('');
+ try{const f=await api('discover',{});const all=f.all||[{ip:f.ip,serial:f.serial}];
+  $('foundList').innerHTML=all.map((o,i)=>`<button data-i="${i}">Ofen ${esc(o.serial)}<small>IP ${esc(o.ip)}${o.serial===String(CFG.serial||'').replace(/^0+/,'')?' · dein Ofen':''} – antippen zum Übernehmen</small></button>`).join('');
+  $('foundList').querySelectorAll('button').forEach(b=>b.onclick=()=>{const o=all[+b.dataset.i];$('ip').value=o.ip;$('serial').value=o.serial;$('connMan').open=true;
+   toast(CFG.has_pin||$('pin').value?'Übernommen – „Speichern“ tippen':'Übernommen – jetzt Passwort eintragen (oder per Foto)');if(!CFG.has_pin)$('pin').focus()});
+  toast(all.length===1?'1 Ofen gefunden':all.length+' Öfen gefunden')}catch(e){connMsg(e.message,true)}}
+function setupPhoto(){connMsg('');photoInto('setup')}
+async function setupRun(ser,pin){connMsg('Gelesen: Seriennummer '+(ser||'–')+(pin?' · Passwort erkannt':'')+' – suche Ofen im WLAN …');
+ try{const r=await api('setup',{serial:ser||'',pin:pin||''});$('ip').value=r.ip;$('serial').value=r.serial;$('pin').value='';
+  connMsg('✓ Verbunden mit Ofen '+r.serial+' unter IP '+r.ip+'. Fertig – jetzt auf der Hauptseite „Funktionen starten“.');await loadCfg();
+ }catch(e){connMsg(e.message,true);if(ser)$('serial').value=ser;if(pin)$('pin').value=pin;$('connMan').open=true}}
+let BGPH='';
+function applyBg(u){BGPH=u||'';const h=$('heroPh');h.hidden=!BGPH;h.style.backgroundImage=BGPH?`url("${BGPH}")`:'';$('hero').classList.toggle('ph',!!BGPH);
+ const p=$('bgPrev');p.style.backgroundImage=BGPH?`url("${BGPH}")`:'';p.textContent=BGPH?'':'kein Foto';$('bgDel').hidden=!BGPH}
+function bgPick(){try{Ofen.pickBackground()}catch(e){toast('Geht nur in der App',true)}}
+function bgClear(){try{Ofen.clearBackground()}catch(e){}applyBg('');toast('Foto entfernt')}
+window.__bgSet=(u,err)=>{if(err){toast(err,true);return}applyBg(u);toast('Foto übernommen')};
+try{applyBg(Ofen.backgroundPhoto())}catch(e){}
 
 /* Homematic IP */
 const ICO_ROOM='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/></svg>';
@@ -703,8 +744,11 @@ const t1=v=>v==null||v===''||isNaN(+v)?'–':(+v).toFixed(1).replace('.',',');
 const ICO_WIN='<svg class="rw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M12 3v18M4 12h16"/></svg>';
 function renderRooms(s){const rs=s.rooms||[],th=s.thermo||{},conn=s.rooms!==undefined;setHm(conn);
  // Startseite: nur eine Zeile zur Raumsteuerung
- const vl=s.valve||{};if(vl.enabled&&hmOn||vl.closed){$('valveHome').hidden=false;$('valveHome').textContent='Heizkörper'+(vl.label?' '+vl.label:'')+' · '+(vl.msg||(vl.closed?'zu':'auf'))}else $('valveHome').hidden=true;
- if(th.enabled&&hmOn){$('thHome').hidden=false;$('thHome').textContent='Raumsteuerung'+(th.label?' · '+th.label+' '+t1(th.temp)+' °C → '+t1(th.target)+' °C':'')+(th.msg?' · '+th.msg:'')}else $('thHome').hidden=true;
+ const vl=s.valve||{};if(vl.enabled&&hmOn||vl.closed){const v=$('valveHome');v.hidden=false;v.classList.toggle('cold',!!vl.closed);
+  v.innerHTML=`<div class="rl">Heizkörper</div><div class="rv">${vl.closed?'zu':'auf'}</div><div class="rs">${vl.label?'<b>'+esc(vl.label)+'</b> · ':''}${esc(vl.msg||(vl.closed?'geschlossen, solange der Ofen heizt':'normaler Betrieb'))}</div>`}else $('valveHome').hidden=true;
+ if(th.enabled&&hmOn){const e=$('thHome');e.hidden=false;e.classList.toggle('ctrl',RUN.includes(String(s.state)));
+  e.innerHTML=`<div class="rl">Raumsteuerung</div><div class="rv">${t1(th.temp)}<small> → ${t1(th.target)} °C</small></div><div class="rs">${th.label?'<b>'+esc(th.label)+'</b> · ':''}${esc(th.msg||'')}</div>`}else $('thHome').hidden=true;
+ ctlTiles();
  // Bereich Räume
  $('thCard').hidden=!th.enabled;
  if(th.enabled){$('thRoomN').textContent=th.label||'–';$('thMsg').textContent=th.msg||'';$('thTemp').textContent=t1(th.temp)+' °C';if(!thTimer){$('thTarget').textContent=t1(th.target)+' °C';if(th.target!=null)$('thT').value=th.target}}
@@ -763,6 +807,7 @@ const PAGES=[
  {id:'hm',t:'Homematic IP',c:'linear-gradient(135deg,#22c55e,#0fb5a6)',i:SVG('<path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/>')},
  {id:'xpm',t:'Expertenmodus',c:'linear-gradient(135deg,#f59e0b,#ef4444)',i:SVG('<path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5"/><circle cx="12" cy="18" r=".8" fill="currentColor"/>')},
  {id:'outs',xp:1,t:'Gebläse & Ausgänge',c:'linear-gradient(135deg,#0fb5a6,#22c7e8)',i:SVG('<path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/>')},
+ {id:'look',t:'Darstellung',c:'linear-gradient(135deg,#f472b6,#fb923c)',i:SVG('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/>')},
  {id:'bg',t:'Hintergrund & Benachrichtigungen',c:'linear-gradient(135deg,#8b5cf6,#ec4899)',i:SVG('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>')},
  {id:'expert',xp:1,t:'Alle Ofen-Werte',c:'linear-gradient(135deg,#64748b,#334155)',i:SVG('<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>')},
 ];
@@ -774,6 +819,7 @@ function menuSub(id){try{
  if(id==='outs'){const n=Object.keys(man.names||{}).length;return n?n+' benannt'+(man.fresh_air_bit!=null?' · Frischluftgebläse':''):'noch keine benannt'}
  if(id==='bg'){const b=JSON.parse(Ofen.bgInfo());return (b.notif_ok?(CFG.notify_state!==false?'Benachrichtigungen + Zustände':'Benachrichtigungen an'):'Benachrichtigungen aus')+' · Akku-Optimierung '+(b.battery_ok?'aus':'an')}
  if(id==='expert')return 'Jeden Wert einzeln lesen und ändern';
+ if(id==='look')return BGPH?'eigenes Foto in der Statuskarte':'kein Foto';
  if(id==='xpm')return XP?'an – sicherheitsrelevante Funktionen freigeschaltet':'aus';
 }catch(e){}return ''}
 function buildMenu(){$('setMenu').innerHTML=PAGES.filter(p=>XP||!p.xp).map(p=>`<div class="mi" data-p="${p.id}"><div class="mic" style="background:${p.c}">${p.i}</div><div class="mt"><b>${p.t}</b><span>${esc(menuSub(p.id))}</span></div><div class="chev">›</div></div>`).join('');
@@ -852,11 +898,14 @@ function scanParse(f,raw){const t=String(raw).trim();
  return f==='serial'?g[0]:g.slice().sort((a,b)=>b.length-a.length)[0]}
 /* Typenschild per Foto: „Serie No. …“ und „Password: …“ (NBE-Aufkleber) bzw. SGTIN (Homematic) */
 function photoInto(f){try{Ofen.photoText(f)}catch(e){toast('Foto geht nur in der App',true)}}
-window.__photoText=(f,txt,err)=>{if(err){toast(err,true);return}if(txt==null)return;
+window.__photoText=(f,txt,err)=>{if(err){if(f==='setup')connMsg(err,true);else toast(err,true);return}if(txt==null)return;
  const t=String(txt).replace(/\n/g,' ');
  const ser=(t.match(/Serie\w*\s*(?:No|Nr|Nummer)?\.?\s*:?\s*(\d{3,})/i)||t.match(/(?:S\/?N|Serial)\D{0,3}(\d{3,})/i)||[])[1];
  const pw=(t.match(/(?:Pass\s*word|Passw\w*|PIN)\s*:?\s*([0-9OoIl ]{6,})/i)||[])[1];
  const pin=pw?pw.replace(/[Oo]/g,'0').replace(/[Il]/g,'1').replace(/\s/g,''):null;
+ if(f==='setup'){const okPin=pin&&/^\d{6,}$/.test(pin)?pin:'';if(!ser&&!okPin){connMsg('Auf dem Foto weder Seriennummer noch Passwort erkannt. Näher heran, scharf und ohne Spiegelung fotografieren.',true);return}
+  if(!okPin&&!CFG.has_pin){connMsg('Seriennummer '+ser+' gelesen, aber kein Passwort. Noch einmal fotografieren oder Passwort unter „Von Hand eingeben“ eintragen.',true);$('serial').value=ser;$('connMan').open=true;return}
+  setupRun(ser||'',okPin);return}
  const got=[];
  if(ser){$('serial').value=ser;got.push('Seriennummer '+ser)}
  if(pin&&/^\d{6,}$/.test(pin)){$('pin').value=pin;$('pin').type='text';setTimeout(()=>$('pin').type='password',6000);got.push('Passwort '+pin)}
