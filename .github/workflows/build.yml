@@ -42,9 +42,14 @@ jobs:
 
       # HDR Aduro Home Raspi: eine JAR-Datei für den Raspberry Pi (Java 17)
       - name: Raspi-Version bauen
+        run: gradle :raspi:fatJar --no-daemon --stacktrace
+
+      - name: Raspi-Dateien bereitlegen
         run: |
-          gradle :raspi:fatJar --no-daemon --stacktrace
-          cp raspi/build/libs/hdr-aduro-home-raspi.jar hdr-aduro-home-raspi.jar
+          ls -la raspi/build/libs || true
+          JAR=$(ls raspi/build/libs/*.jar | head -1)
+          echo "gefunden: $JAR"
+          cp "$JAR" hdr-aduro-home-raspi.jar
           cp raspi/install.sh hdr-aduro-home-install.sh
 
       - uses: actions/upload-artifact@v4
