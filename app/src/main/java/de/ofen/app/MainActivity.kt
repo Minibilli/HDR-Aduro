@@ -36,7 +36,7 @@ class MainActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Stove.init(this)
+        Stove.init(AndroidPlatform.of(this))
         Notifier.channels(this)
 
         web = WebView(this)
@@ -166,7 +166,7 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun request(id: Int, path: String, body: String?) {
             pool.execute {
-                val res = Api.handle(path, body)
+                val res = Link.handle(path, body)   // gekoppelt mit Raspi: Anfragen gehen ggf. dorthin
                 if (path == "config" && body != null && Stove.configured()) OfenService.start(this@MainActivity)
                 val js = "window.__ofenResolve($id, ${JSONObject.quote(res.toString())})"
                 web.post { web.evaluateJavascript(js, null) }

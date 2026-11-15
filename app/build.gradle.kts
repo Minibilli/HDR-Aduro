@@ -42,6 +42,9 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+
+    // Gemeinsamer Kern mit dem Raspi (Ofen, Homematic, Steuerungs-Übergabe)
+    sourceSets["main"].java.srcDir("../shared/src/main/kotlin")
 }
 
 dependencies {

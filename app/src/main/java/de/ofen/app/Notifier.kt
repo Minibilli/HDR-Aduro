@@ -20,6 +20,7 @@ object Notifier {
     const val ID_EARLY = 3
     const val ID_STATE = 4
     const val ID_HOPPER = 5
+    const val ID_CONTROL = 6
     const val CH_STATE = "state"
 
     fun channels(ctx: Context) {

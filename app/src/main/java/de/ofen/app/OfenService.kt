@@ -22,7 +22,7 @@ class OfenService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        Stove.init(this)
+        Stove.init(AndroidPlatform.of(this))
         Notifier.channels(this)
         val n = Notifier.serviceNotification(this, "Verbinde …")
         val type = if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
@@ -57,17 +57,25 @@ class OfenService : Service() {
 
     private fun monitorLoop() {
         while (running) {
+            // Mit Raspi gekoppelt: Herzschlag (wenn dieses Handy steuert) bzw. Abgleich + Meldungen vom Raspi
+            val viaRaspi = try { Link.tick() } catch (e: Exception) { null }
+            if (viaRaspi != null) {
+                // Raspi überwacht den Ofen – das Handy fragt ihn nicht zusätzlich selbst ab
+                Notifier.updateService(this, "Raspi · $viaRaspi")
+                sleep(Control.HB_MS)
+                continue
+            }
             if (Stove.configured()) {
                 try {
                     wake?.acquire(20_000)
                     val s = Stove.readStatus()
-                    val txt = buildString {
-                        if (s.optBoolean("halted")) append("Ausgeschaltet · ")
-                        append(if (s.optJSONObject("early")?.optBoolean("stopped") == true) "Holzbetrieb (App)" else s.optString("state_text"))
-                        s.optString("room_temp").toDoubleOrNull()?.let { append(" · Raum %.1f °C".format(it)) }
-                        s.optString("smoke_temp").toDoubleOrNull()?.let { append(" · Rauchgas %.0f °C".format(it)) }
-                    }
-                    Notifier.updateService(this, txt)
+                    val txt = Stove.summary(s)
+                    Notifier.updateService(this, when {
+                        !Link.linked() -> txt
+                        Control.active() -> "Steuerung hier · $txt"
+                        Control.isHolder() -> "Raspi nicht erreichbar – Automatik pausiert · $txt"
+                        else -> "Raspi nicht erreichbar – nur Anzeige · $txt"
+                    })
                 } catch (e: Exception) {
                     Notifier.updateService(this, "Keine Verbindung zum Ofen")
                     Stove.valveOfflineCheck()

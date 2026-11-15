@@ -1,8 +1,5 @@
 package de.ofen.app
 
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import org.json.JSONObject
 import java.net.DatagramSocket
 import java.net.InetAddress
@@ -12,11 +9,13 @@ class StoveError(msg: String) : Exception(msg)
 
 /** Gesamte Ofen-Logik: Verbindung, Status, Handbetrieb, Warnungen, Automatik. */
 object Stove {
-    private lateinit var ctx: Context
+    private lateinit var plat: Platform
 
-    fun init(c: Context) {
-        if (!::ctx.isInitialized) ctx = c.applicationContext
+    fun init(p: Platform) {
+        if (!::plat.isInitialized) plat = p
     }
+
+    val platform: Platform get() = plat
 
     // ------------------------------------------------------------------ Texte
     val STATE_TEXT = mapOf(
@@ -35,18 +34,16 @@ object Stove {
     private val PELLET_RUN = setOf("5", "6")
 
     // ------------------------------------------------------------------ Konfiguration
-    private val prefs get() = ctx.getSharedPreferences("ofen", Context.MODE_PRIVATE)
-
     @Synchronized
     fun cfg(): JSONObject = try {
-        JSONObject(prefs.getString("config", "{}") ?: "{}")
+        JSONObject(plat.loadConfig().ifBlank { "{}" })
     } catch (e: Exception) {
         JSONObject()
     }
 
     @Synchronized
     fun saveCfg(c: JSONObject) {
-        prefs.edit().putString("config", c.toString()).apply()
+        plat.saveConfig(c.toString())
     }
 
     private fun need(): Triple<String, String, String> {
@@ -101,23 +98,7 @@ object Stove {
     // ------------------------------------------------------------------ Ofen im WLAN finden
     /** Broadcast-Adressen der WLAN-Netze (z. B. 192.168.50.255) plus 255.255.255.255 */
     private fun broadcastAddrs(): List<String> {
-        val out = mutableListOf<String>()
-        try {
-            val cm = ctx.getSystemService(ConnectivityManager::class.java)
-            @Suppress("DEPRECATION")
-            for (n in cm.allNetworks) {
-                val caps = cm.getNetworkCapabilities(n) ?: continue
-                if (!caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) continue
-                for (la in cm.getLinkProperties(n)?.linkAddresses ?: emptyList()) {
-                    val b = la.address.address
-                    if (b.size != 4) continue
-                    val pl = la.prefixLength.coerceIn(8, 30)
-                    val ip = ((b[0].toInt() and 255) shl 24) or ((b[1].toInt() and 255) shl 16) or ((b[2].toInt() and 255) shl 8) or (b[3].toInt() and 255)
-                    val bc = ip or ((1 shl (32 - pl)) - 1)
-                    out += "${(bc ushr 24) and 255}.${(bc ushr 16) and 255}.${(bc ushr 8) and 255}.${bc and 255}"
-                }
-            }
-        } catch (e: Exception) { }
+        val out = try { plat.broadcastAddrs().toMutableList() } catch (e: Exception) { mutableListOf() }
         out += "255.255.255.255"
         return out.distinct()
     }
@@ -189,27 +170,16 @@ object Stove {
         c.put("ip", hit.first).put("ip_changed_at", now).put("ip_old", old); saveCfg(c)
         try {
             if (c.optBoolean("notify_state", true))
-                Notifier.stateChange(ctx, "Ofen hat eine neue IP-Adresse", "$old → ${hit.first} – von der App automatisch übernommen.")
+                plat.notifyState("Ofen hat eine neue IP-Adresse", "$old → ${hit.first} – von der App automatisch übernommen.")
         } catch (e: Exception) { }
         return true
     }
 
     fun routeInfo(): JSONObject {
         val ip = cfg().optString("ip")
-        var vpn = false
-        var homeWifi = false   // Handy hängt im WLAN, dessen Adressbereich zum Ofen passt (also zu Hause)
-        try {
-            val cm = ctx.getSystemService(ConnectivityManager::class.java)
-            @Suppress("DEPRECATION")
-            for (n in cm.allNetworks) {
-                val caps = cm.getNetworkCapabilities(n) ?: continue
-                if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) vpn = true
-                else if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) && ip.isNotBlank()) {
-                    val pre = ip.split(".").take(3)
-                    if (cm.getLinkProperties(n)?.linkAddresses?.any { it.address.hostAddress?.split(".")?.take(3) == pre } == true) homeWifi = true
-                }
-            }
-        } catch (e: Exception) { }
+        val vpn = try { plat.vpnActive() } catch (e: Exception) { false }
+        // Gerät hängt im lokalen Netz, dessen Adressbereich zum Ofen passt (also zu Hause)
+        val homeWifi = ip.isNotBlank() && try { plat.onHomeNet(ip) } catch (e: Exception) { false }
         val out = JSONObject().put("vpn_if", vpn).put("home_wifi", homeWifi)
         if (ip.isBlank()) return out.put("route", "none").put("local_ip", "")
         val local = try {
@@ -251,9 +221,15 @@ object Stove {
         s.put("alarm_text", ALARM_TEXT[alarm] ?: alarm)
         s.put("raw", JSONObject(op))
         routeInfo().let { s.put("route", it.optString("route")).put("home_wifi", it.optBoolean("home_wifi")) }
-        try { externalStopCheck(prevState, st) } catch (e: Exception) { }
-        haltCheck(s)
+        // Automatiken schalten nur auf dem Gerät, das gerade die Steuerung hat (Raspi oder Handy)
+        val act = Control.active()
+        if (act) try { externalStopCheck(prevState, st) } catch (e: Exception) { }
+        haltCheck(s, act)
         try { hopperCheck(s) } catch (e: Exception) { }
+        if (!act) {
+            try { passiveInfo(s) } catch (e: Exception) { }
+            checkWood(s)
+        } else {
         try {
             earlyCheck(s)
         } catch (e: Exception) {
@@ -273,6 +249,7 @@ object Stove {
         } catch (e: Exception) {
             s.put("valve", JSONObject().put("enabled", true).put("closed", cfg().has("hm_valve_closed")).put("msg", "Fehler: ${e.message}"))
         }
+        }
         lastStatusAt = System.currentTimeMillis()
         if (Hmip.connected()) {
             Hmip.refresh()
@@ -280,6 +257,43 @@ object Stove {
         }
         lastStatus = s
         return s
+    }
+
+    /** Kurztext für Benachrichtigungen, z. B. „Normalbetrieb · Raum 21,3 °C · Rauchgas 180 °C“ */
+    fun summary(s: JSONObject): String = buildString {
+        if (s.optBoolean("halted")) append("Ausgeschaltet · ")
+        append(if (s.optJSONObject("early")?.optBoolean("stopped") == true) "Holzbetrieb (App)" else s.optString("state_text"))
+        s.optString("room_temp").toDoubleOrNull()?.let { append(" · Raum %.1f °C".format(it)) }
+        s.optString("smoke_temp").toDoubleOrNull()?.let { append(" · Rauchgas %.0f °C".format(it)) }
+    }
+
+    /** Gerät ohne Steuerung: Automatiken nur anzeigen (Meldungen vom steuernden Gerät), nichts schalten */
+    private fun passiveInfo(s: JSONObject) {
+        val c = cfg()
+        val who = Control.passiveMsg()
+        fun from(key: String, enabled: Boolean): JSONObject {
+            val r = Control.remoteInfo(key)
+            val o = if (r != null) JSONObject(r.toString()) else JSONObject()
+            if (key != "early" && o.optString("msg").isBlank()) o.put("msg", who)
+            return o.put("enabled", enabled).put("remote", true)
+        }
+        val e = from("early", c.optBoolean("early_stop")).put("stopped", early.stopped)
+        if (e.optString("msg").isBlank() && early.stopped) e.put("msg", early.msg)
+        s.put("early", e)
+        val th = from("thermo", c.optBoolean("hm_ctrl") && c.optBoolean("expert"))
+        if (th.optBoolean("enabled")) {
+            th.put("target", c.optDouble("hm_ctrl_target", 21.0))
+            if (Hmip.connected()) {
+                Hmip.refresh()
+                Hmip.sensor(c.optString("hm_ctrl_id"))?.let { sen ->
+                    val t = sen.optDouble("temp", Double.NaN)
+                    th.put("label", sen.optString("label")).put("temp", if (t.isNaN()) JSONObject.NULL else t)
+                }
+            }
+        }
+        s.put("thermo", th)
+        s.put("autopower", from("autopower", c.optBoolean("auto_power")))
+        s.put("valve", from("valve", c.optBoolean("hm_valve")).put("closed", c.has("hm_valve_closed")))
     }
 
     // ------------------------------------------------------------------ Zustandsänderung melden
@@ -296,7 +310,7 @@ object Stove {
             room?.toDoubleOrNull()?.let { append("Raum %.1f °C".format(it)) }
             smoke?.toDoubleOrNull()?.let { if (isNotEmpty()) append(" · "); append("Rauchgas %.0f °C".format(it)) }
         }
-        Notifier.stateChange(ctx, "Ofen: $name", "vorher: $before" + if (extra.isNotEmpty()) "\n$extra" else "")
+        plat.notifyState("Ofen: $name", "vorher: $before" + if (extra.isNotEmpty()) "\n$extra" else "")
     }
 
     private fun smoke(s: JSONObject): Double? = s.optString("smoke_temp").toDoubleOrNull()
@@ -311,7 +325,7 @@ object Stove {
         s.put("wood_mode", wood).put("wood_min", thr).put("wood_warn", false)
         val t = smoke(s) ?: return
         if (!wood) {
-            if (woodNotified) Notifier.clear(ctx, Notifier.ID_WOOD)
+            if (woodNotified) plat.clearAlert(Alerts.WOOD)
             woodArmed = false; woodNotified = false
             return
         }
@@ -319,11 +333,11 @@ object Stove {
         if (t < thr) {
             s.put("wood_warn", true)
             if (woodArmed && !woodNotified) {
-                Notifier.alert(ctx, Notifier.ID_WOOD, "Holz nachlegen", "Rauchgas ${t.toInt()} °C – unter ${thr.toInt()} °C")
+                plat.alert(Alerts.WOOD, "Holz nachlegen", "Rauchgas ${t.toInt()} °C – unter ${thr.toInt()} °C")
                 woodNotified = true
             }
         } else if (t >= thr + 5 && woodNotified) {
-            Notifier.clear(ctx, Notifier.ID_WOOD)
+            plat.clearAlert(Alerts.WOOD)
             woodNotified = false
         }
     }
@@ -349,7 +363,7 @@ object Stove {
             } else if (c.optBoolean("early_restart") && t < c.optDouble("early_restart_temp", EARLY_RESTART_BELOW)) {
                 set("misc.start", "1")
                 cancelEarly()
-                Notifier.alert(ctx, Notifier.ID_EARLY, "Pellets starten wieder", "Holz abgebrannt (Rauchgas ${t.toInt()} °C)")
+                plat.alert(Alerts.EARLY, "Pellets starten wieder", "Holz abgebrannt (Rauchgas ${t.toInt()} °C)")
             }
             info.put("stopped", early.stopped)
             return
@@ -362,7 +376,7 @@ object Stove {
                 set("misc.stop", "1")
                 early.stopped = true; early.aboveSince = 0
                 early.msg = "Pellets bei ${t.toInt()} °C Rauchgas von der App gestoppt"
-                Notifier.alert(ctx, Notifier.ID_EARLY, "Pellets gestoppt", "Holz brennt – Rauchgas ${t.toInt()} °C über ${thr.toInt()} °C")
+                plat.alert(Alerts.EARLY, "Pellets gestoppt", "Holz brennt – Rauchgas ${t.toInt()} °C über ${thr.toInt()} °C")
                 info.put("stopped", true).put("msg", early.msg)
             }
         } else early.aboveSince = 0
@@ -380,7 +394,7 @@ object Stove {
     private const val VALVE_RETRY = 2 * 60_000L
 
     private fun valveNotify(title: String, text: String) {
-        if (cfg().optBoolean("notify_state", true)) Notifier.stateChange(ctx, title, text)
+        if (cfg().optBoolean("notify_state", true)) plat.notifyState(title, text)
     }
 
     private fun valveOpen(c: JSONObject, closed: JSONObject) {
@@ -397,6 +411,7 @@ object Stove {
 
     /** Aufruf ohne Ofen-Verbindung: nach 30 min ohne Status die Heizkörper sicherheitshalber öffnen */
     fun valveOfflineCheck() {
+        if (!Control.active()) return
         val c = cfg(); val closed = c.optJSONObject("hm_valve_closed") ?: return
         if (lastStatusAt != 0L && System.currentTimeMillis() - lastStatusAt < 30 * 60_000L) return
         if (System.currentTimeMillis() - valve.lastTry < VALVE_RETRY) return
@@ -562,7 +577,7 @@ object Stove {
     private const val AP_MIN_GAP = 10 * 60_000L
     private val AP_PCT = mapOf(1 to "10", 2 to "50", 3 to "100")
     private val AP_NAME = mapOf(1 to "Niedrig", 2 to "Mittel", 3 to "Hoch")
-    @Volatile private var apLastSet = 0L
+    @Volatile var apLastSet = 0L
 
     fun autoPowerOn() = cfg().optBoolean("auto_power")
 
@@ -606,7 +621,7 @@ object Stove {
         s.put("fixed_power", AP_PCT.getValue(want)); info.put("level", want)
         info.put("msg", "auf ${AP_NAME[want]} gestellt – $src $where")
         if (c.optBoolean("notify_state", true) && cur != null)
-            try { Notifier.stateChange(ctx, "Heizstufe ${AP_NAME[want]}", "$src $where") } catch (e: Exception) { }
+            try { plat.notifyState("Heizstufe ${AP_NAME[want]}", "$src $where") } catch (e: Exception) { }
     }
 
     // ------------------------------------------------------------------ Hauptschalter (Ausschalten / Starten)
@@ -632,7 +647,7 @@ object Stove {
         saveCfg(c)
         if (man.active || man.deadline.isNotEmpty()) try { manualAllOff() } catch (e: Exception) { }
         valveRelease()
-        Notifier.stateChange(ctx, "Ofen am Gerät ausgeschaltet",
+        plat.notifyState("Ofen am Gerät ausgeschaltet",
             "Die App behandelt das wie „Ausschalten“: Automatiken pausiert, nichts startet von selbst. Wieder an mit „Starten“ in der App oder am Ofen.")
     }
 
@@ -641,7 +656,7 @@ object Stove {
         val c = cfg()
         c.put("halted", true).put("halted_at", System.currentTimeMillis()).put("halted_seen_off", false); c.remove("halted_ext"); saveCfg(c)
         if (man.active || man.deadline.isNotEmpty()) try { manualAllOff() } catch (e: Exception) { }
-        valveRelease()
+        if (Control.isHolder()) valveRelease()
         haltLastStop = System.currentTimeMillis()
         set("misc.stop", "1")
     }
@@ -656,9 +671,13 @@ object Stove {
     }
 
     /** true = ausgeschaltet; trägt den Zustand in den Status ein */
-    private fun haltCheck(s: JSONObject): Boolean {
+    private fun haltCheck(s: JSONObject, act: Boolean): Boolean {
         val c = cfg()
         if (!c.optBoolean("halted")) { s.put("halted", false); return false }
+        if (!act) {   // Zustand kommt vom steuernden Gerät – hier nur anzeigen
+            s.put("halted", true).put("halted_at", c.optLong("halted_at")).put("halted_ext", c.optBoolean("halted_ext"))
+            return true
+        }
         val st = s.optString("state")
         val now = System.currentTimeMillis()
         if (st !in HALT_RUNNING && st != "9") {
@@ -667,7 +686,7 @@ object Stove {
             // nach dem Stopp von außen (Taste am Ofen / Aduro-App) wieder gestartet -> wie „Starten“
             for (k in listOf("halted", "halted_at", "halted_seen_off", "halted_ext")) c.remove(k)
             saveCfg(c)
-            Notifier.stateChange(ctx, "Ofen wieder eingeschaltet", "Außerhalb der App gestartet – die Automatiken der App sind wieder aktiv.")
+            plat.notifyState("Ofen wieder eingeschaltet", "Außerhalb der App gestartet – die Automatiken der App sind wieder aktiv.")
             s.put("halted", false); return false
         } else if (st in HALT_RUNNING && now - haltLastStop > 2 * 60_000L) {
             // Stoppbefehl ist offenbar nicht angekommen -> noch einmal senden
@@ -705,11 +724,14 @@ object Stove {
     // ------------------------------------------------------------------ App ganz beenden
     /** Vor dem Beenden: alles zurückstellen, was ohne die App sonst falsch stehen bliebe. Der Ofen selbst bleibt, wie er ist. */
     fun appQuit() {
-        cancelEarly(); early.aboveSince = 0
+        // Hat dieses Handy die Steuerung, geht sie an den Raspi zurück – der macht nahtlos weiter
+        try { Control.handOverOnQuit() } catch (e: Exception) { }
+        val holder = Control.isHolder()
+        if (holder) { cancelEarly(); early.aboveSince = 0 }
         if (man.active || man.deadline.isNotEmpty()) try { manualAllOff() } catch (e: Exception) { }
-        valveRelease()
+        if (holder) valveRelease()
         val c = cfg()
-        if (c.optBoolean("hm_ctrl")) restoreBoilerTarget(c)
+        if (holder && c.optBoolean("hm_ctrl")) restoreBoilerTarget(c)
         c.remove("app_off"); c.put("app_on", false); saveCfg(c)
     }
 
@@ -766,7 +788,7 @@ object Stove {
         if (!info.optBoolean("known") || !c.optBoolean("hopper_notify", true)) return
         if (kg <= warn && !hopper.warned) {
             hopper.warned = true
-            Notifier.alert(ctx, Notifier.ID_HOPPER, "Pellets nachfüllen", "Noch etwa ${Math.max(0, kg.toInt())} kg im Behälter")
+            plat.alert(Alerts.HOPPER, "Pellets nachfüllen", "Noch etwa ${Math.max(0, kg.toInt())} kg im Behälter")
         } else if (kg > warn + 1) hopper.warned = false
     }
 

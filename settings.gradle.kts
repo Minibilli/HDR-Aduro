@@ -7,3 +7,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "ofen-app"
 include(":app")
+include(":raspi")

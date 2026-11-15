@@ -46,7 +46,9 @@ object Api {
                 .put("expert", c.optBoolean("expert")).put("expert_ver", Stove.EXPERT_TEXT_VERSION)
                 .put("hm", Hmip.connected()))
         }
-        "status" -> ok(Stove.readStatus())
+        "status" -> ok(Stove.readStatus().put("control", Control.info()))
+        "control" -> ok(Control.info())
+        "link" -> ok(Control.linkInfo())
         "net" -> ok(Stove.routeInfo())
         "manual" -> ok(Stove.manualState())
         "pelletstop" -> ok(Stove.getPelletStop())
@@ -78,7 +80,23 @@ object Api {
     /** Sicherheitsrelevante Befehle nur im Expertenmodus */
     private val EXPERT_ONLY = setOf("pelletstop", "manual/switch", "manual/name", "settings/read", "settings/write")
 
+    /** Gerät ohne Steuerung: was die Automatiken betrifft, darf nur das steuernde Gerät ändern */
+    private val HOLDER_ONLY = setOf("expert", "manual/switch", "manual/name", "pelletstop", "settings/write", "hm/disconnect", "hopper/config")
+
     private fun handlePost(p: String, b: JSONObject): JSONObject {
+        when (p) {
+            "control/take" -> return ok(Control.takeLocal())
+            "control/release" -> return ok(Control.releaseLocal())
+            "control/force" -> return ok(Control.forceLocal())
+            "app/on" -> { Stove.appOn(); return ok() }
+        }
+        if (p.startsWith("link/")) return ok(Control.linkPost(p, b))
+        if (!Control.mayConfigure()) {
+            val locked = p in HOLDER_ONLY ||
+                (p == "config" && b.keys().asSequence().any { it in Control.LOCKED_CFG }) ||
+                (p == "power" && Stove.cfg().optBoolean("auto_power"))
+            if (locked) throw StoveError(Control.lockedMsg())
+        }
         if (p in EXPERT_ONLY) Stove.requireExpert()
         if (p == "config" && (b.optBoolean("early_stop") || b.optBoolean("early_restart") || b.optBoolean("hm_ctrl"))) Stove.requireExpert()
         when (p) {

@@ -45,6 +45,10 @@ Gedacht für die **Aduro-Hybridöfen H1, H2, H3 Lux, H4 Lux, H5 und H6 Lux**. Si
 - Homematic IP (optional): Räume, Raumtemperaturen, Raumsteuerung mit Zieltemperatur
 - Von unterwegs über eine WireGuard-VPN-App ins Heimnetz
 
+## Wandgerät mit Touchscreen (HDR Aduro Home Raspi)
+
+Dieselbe Oberfläche auf einem Raspberry Pi mit 7"-Touchscreen, der rund um die Uhr läuft. Handys können parallel genutzt werden; die Automatiken laufen immer nur auf dem Gerät mit der **Steuerung**, die sich gegenseitig übernehmen und freigeben lässt. Anleitung: [raspi/README.md](raspi/README.md).
+
 ## Installieren
 
 1. Auf dem Handy unter **Releases → latest** die Datei `HDR-Aduro.apk` antippen und herunterladen.

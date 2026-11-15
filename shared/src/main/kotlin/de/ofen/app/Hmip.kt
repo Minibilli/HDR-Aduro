@@ -1,6 +1,5 @@
 package de.ofen.app
 
-import android.os.Build
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -38,8 +37,8 @@ object Hmip {
             .put("deviceManufacturer", "none")
             .put("deviceType", "Computer")
             .put("language", "de_DE")
-            .put("osType", "Android")
-            .put("osVersion", Build.VERSION.RELEASE ?: ""))
+            .put("osType", Stove.platform.osType)
+            .put("osVersion", Stove.platform.osVersion))
         .put("id", ap)
 
     private fun headers(ap: String, token: String? = null, pin: String? = null): Map<String, String> {
@@ -92,7 +91,7 @@ object Hmip {
         val rest = lookup(ap)
         val device = UUID.randomUUID().toString()
         val (code, txt) = post("$rest/hmip/auth/connectionRequest",
-            JSONObject().put("deviceId", device).put("deviceName", "HDR Aduro").put("sgtin", ap),
+            JSONObject().put("deviceId", device).put("deviceName", if (Stove.platform.kind == "raspi") "HDR Aduro Home Raspi" else "HDR Aduro").put("sgtin", ap),
             headers(ap, pin = pin))
         if (code != 200) {
             val hint = if (txt.contains("PIN", true) || code == 403) " Ist eine PIN am Access Point vergeben?" else ""

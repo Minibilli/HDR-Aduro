@@ -1,4 +1,4 @@
-name: APK bauen
+name: APK und Raspi bauen
 
 on:
   push:
@@ -40,10 +40,19 @@ jobs:
       - name: APK umbenennen
         run: cp app/build/outputs/apk/release/app-release.apk HDR-Aduro.apk
 
+      # HDR Aduro Home Raspi: eine JAR-Datei für den Raspberry Pi (Java 17)
+      - name: Raspi-Version bauen
+        run: |
+          gradle :raspi:fatJar --no-daemon --stacktrace
+          cp raspi/build/libs/hdr-aduro-home-raspi.jar hdr-aduro-home-raspi.jar
+          cp raspi/install.sh hdr-aduro-home-install.sh
+
       - uses: actions/upload-artifact@v4
         with:
           name: HDR-Aduro-APK
-          path: HDR-Aduro.apk
+          path: |
+            HDR-Aduro.apk
+            hdr-aduro-home-raspi.jar
 
       # Immer die neueste Version unter "Releases" -> leicht auf dem Handy herunterladbar
       - name: Release aktualisieren
@@ -51,6 +60,9 @@ jobs:
         with:
           tag_name: latest
           name: "HDR Aduro (Build ${{ github.run_number }})"
-          body: "Neueste Version. Auf dem Handy HDR-Aduro.apk antippen und installieren. Inoffiziell – Nutzung auf eigene Gefahr."
-          files: HDR-Aduro.apk
+          body: "Neueste Version. Handy: HDR-Aduro.apk antippen und installieren. Raspberry Pi: hdr-aduro-home-install.sh herunterladen und mit bash ausführen (lädt hdr-aduro-home-raspi.jar). Inoffiziell – Nutzung auf eigene Gefahr."
+          files: |
+            HDR-Aduro.apk
+            hdr-aduro-home-raspi.jar
+            hdr-aduro-home-install.sh
           make_latest: true

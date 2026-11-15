@@ -252,6 +252,23 @@ body.appoff nav,body.appoff #dots,body.appoff #t-ofen>:not(#offCard){display:non
 body:not(.appoff) #offCard{display:none}
 #toast{position:fixed;left:16px;right:16px;bottom:calc(92px + env(safe-area-inset-bottom));padding:13px 15px;border-radius:16px;background:var(--ink);color:var(--bg);font-size:14px;font-weight:600;transform:translateY(20px);opacity:0;visibility:hidden;transition:.25s;z-index:6}
 #toast.show{transform:none;opacity:1;visibility:visible}#toast.err{background:var(--bad);color:#fff}
+/* Steuerung Raspi ↔ Handys */
+.ctlbar{display:flex;align-items:center;gap:11px;background:var(--card);border-radius:18px;padding:10px 10px 10px 12px;margin:0 0 12px;box-shadow:var(--shadow)}
+.ctlbar[hidden]{display:none}
+.ctlbar .ci{width:34px;height:34px;flex:0 0 34px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--go) 16%,transparent);color:var(--go)}
+.ctlbar .ci svg{width:18px;height:18px}
+.ctlbar.away .ci{background:color-mix(in srgb,var(--mute) 16%,transparent);color:var(--mute)}
+.ctlbar.warn .ci{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.ctlbar.bad .ci{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.ctlbar .ct{flex:1;min-width:0}.ctlbar .ct b{display:block;font-size:14px;line-height:1.25}.ctlbar .ct span{display:block;color:var(--mute);font-size:12.5px;line-height:1.3}
+.ctlbar button{flex:0 0 auto;padding:10px 14px;font-size:13.5px;border-radius:12px}
+body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#t-set button[hidden],.ctlbar button[hidden]{display:none!important}
+.pair{font-size:46px;font-weight:800;letter-spacing:.16em;text-align:center;margin:4px 0 0;font-variant-numeric:tabular-nums}
+.lkrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.lkrow:first-child{border-top:0}.lkrow div{flex:1;min-width:0}.lkrow b{display:block}.lkrow span{color:var(--mute);font-size:12.5px}.lkrow button{flex:0 0 auto;padding:8px 12px;font-size:13px}
+.login{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;justify-content:center;padding:24px}.login[hidden]{display:none}
+/* Im Browser / am Raspi-Touchscreen: nur, was es dort gibt */
+.web #fnHead,.web .setupBtn,.web .setupBtn+p,.web .scan,.web #vpnApp,.web label:has(+#vpnApp),.web #vpnBox,.web #vpnHome{display:none!important}
 </style></head><body><div id="appBg" hidden></div>
 
 <header>
@@ -266,6 +283,7 @@ body:not(.appoff) #offCard{display:none}
 
 <!-- ============ Tab: Ofen ============ -->
 <section id="t-ofen">
+  <div class="ctlbar" id="ctlBar" hidden><div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></div><div class="ct"><b id="ctlT">–</b><span id="ctlS"></span></div><button id="ctlBtn" onclick="ctlAction()">Übernehmen</button></div>
   <div class="offcard" id="offCard">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/></svg>
     <h3>Funktionen sind aus</h3>
@@ -384,6 +402,34 @@ body:not(.appoff) #offCard{display:none}
     <label>VPN-App für unterwegs</label><select id="vpnApp"><option value="com.zaneschepke.wireguardautotunnel">WG Tunnel</option><option value="com.wireguard.android">WireGuard</option></select>
     <button class="fire" style="width:100%;margin-top:16px" onclick="saveCfg()">Speichern</button>
     <p class="mute" style="margin-bottom:0;font-size:13px"><b>Wechselnde IP-Adresse:</b> Antwortet der Ofen nicht mehr, sucht die App ihn im Heim-WLAN anhand der Seriennummer und übernimmt die neue IP von selbst<span id="ipChg"></span>. Unterwegs über VPN geht das nicht – deshalb am besten im Router eine feste IP vergeben (FRITZ!Box: Heimnetz → Netzwerk → Ofen bearbeiten → „Diesem Netzwerkgerät immer die gleiche IPv4-Adresse zuweisen“).</p>
+  </div>
+  <div class="card" data-pg="link">
+    <h2>Steuerung</h2>
+    <p class="mute" style="margin-top:0">Anzeigen und Bedienen geht auf allen Geräten. Die <b>Automatiken</b> (Raumsteuerung, automatische Heizstufe, Pellets früher stoppen und Neustart, Heizkörper) laufen aber immer nur auf <b>einem</b> Gerät – dem mit der Steuerung. Bei der Übergabe wandern Einstellungen und laufender Zustand mit (z.&nbsp;B. „Heizkörper zu“, „ausgeschaltet“).</p>
+    <div class="okbox" id="lkCtl" style="margin-top:4px">–</div>
+    <div class="row" style="margin-top:12px"><button class="fire" id="lkTake" onclick="ctlTake()">Übernehmen</button><button id="lkRel" onclick="ctlRelease()">Freigeben</button></div>
+    <button id="lkForce" style="width:100%;margin-top:10px" hidden onclick="ctlForce()">Notfall-Übernahme (Raspi offline)</button>
+    <div id="lkRaspi" hidden>
+      <h2 style="margin-top:22px">Gerät koppeln</h2>
+      <p class="mute" style="margin-top:0">In der HDR-Aduro-App unter <b>Einstellungen → Raspi &amp; Handys</b> die Adresse <b id="lkUrl">–</b> und diesen Code eintragen. Im Browser die Adresse öffnen und den Code eingeben.</p>
+      <div class="pair" id="lkCode">––––––</div>
+      <p class="mute" style="text-align:center;margin:0 0 10px" id="lkCodeS"></p>
+      <button style="width:100%" onclick="lkNewCode()">Neuer Code</button>
+      <h2 style="margin-top:22px">Gekoppelte Geräte</h2>
+      <div id="lkClients"></div>
+      <div class="tgl" style="margin-top:14px"><div><b>Steuerung zurück an den Raspi</b><span class="mute">Gibt ein Handy frei oder meldet es sich 3 Minuten nicht, steuert wieder der Raspi. Aus: Steuerung ist dann freigegeben, keine Automatik läuft.</span></div><label class="sw"><input type="checkbox" id="lkBack"><i></i></label></div>
+      <label>Name dieses Raspi</label><div class="row"><input id="lkName" placeholder="Raspi"><button style="flex:0 0 110px" onclick="lkSaveName()">Speichern</button></div>
+    </div>
+    <div id="lkPhone" hidden>
+      <h2 style="margin-top:22px">Raspi</h2>
+      <div id="lkPairBox">
+        <label>Adresse des Raspi</label><input id="lkAddr" placeholder="192.168.1.20 oder raspi.local" autocapitalize="off">
+        <label>Code vom Touchscreen</label><input id="lkPin" inputmode="numeric" maxlength="6" placeholder="6 Ziffern">
+        <button class="fire" style="width:100%;margin-top:14px" onclick="lkPair()">Koppeln</button>
+        <p class="mute" style="margin-bottom:0">Den Code zeigt der Raspi unter Einstellungen → Raspi &amp; Handys. Beim Koppeln übernimmt das Handy Ofen-Zugang, Homematic und alle Einstellungen vom Raspi; eigene Automatiken dieses Handys werden vorher sauber beendet.</p>
+      </div>
+      <div id="lkPaired" hidden><div class="okbox" id="lkPairT"></div><button style="width:100%;margin-top:10px" onclick="lkUnpair()">Entkoppeln</button></div>
+    </div>
   </div>
   <div class="card" data-pg="look">
     <h2>Hintergrundbild</h2>
@@ -534,7 +580,36 @@ body:not(.appoff) #offCard{display:none}
   </div>
 </div>
 
+<div class="login" id="login" hidden><div class="card">
+  <h2>HDR Aduro Home</h2>
+  <p style="margin-top:0">Dieses Gerät ist noch nicht mit dem Raspi gekoppelt. Den Code zeigt der Touchscreen unter <b>Einstellungen → Raspi &amp; Handys</b>.</p>
+  <input id="loginCode" inputmode="numeric" maxlength="6" placeholder="6-stelliger Code">
+  <button class="fire" style="width:100%;margin-top:12px" onclick="webPair()">Koppeln</button>
+  <p class="mute" id="loginMsg" style="margin-bottom:0"></p>
+</div></div>
 <script>
+/* Browser / Raspi-Touchscreen: gleiche Oberfläche wie in der App, Anfragen gehen per fetch an den Raspi-Server */
+const WEB=!window.Ofen;
+let WEBTOK='';
+if(WEB){try{WEBTOK=localStorage.getItem('ofenTok')||''}catch(e){}
+ const hdr=()=>({'Content-Type':'application/json','X-Ofen-Token':WEBTOK});
+ const done=(id,txt)=>{const f=()=>window.__ofenResolve?window.__ofenResolve(id,txt):setTimeout(f,0);f()};
+ window.Ofen={
+  request(id,p,body){fetch('api/'+p,{method:body==null?'GET':'POST',headers:hdr(),body:body==null?undefined:body})
+   .then(r=>{if(r.status===401)webLogin();return r.text()}).then(t=>done(id,t)).catch(()=>done(id,JSON.stringify({error:'Raspi nicht erreichbar'})))},
+  startFunctions(){fetch('api/app/on',{method:'POST',headers:hdr(),body:'{}'})},
+  openApp(){return false},tick(){},vibrate(){try{navigator.vibrate&&navigator.vibrate(40)}catch(e){}},
+  quitApp(){throw new Error('web')},pickBackground(){throw new Error('web')},backgroundPhoto(){return ''},clearBackground(){},
+  bgInfo(){return '{"notif_ok":true,"battery_ok":true}'},photoText(){throw new Error('web')},scanCode(){throw new Error('web')},fixBattery(){},fixNotifications(){}};
+ document.documentElement.classList.add('web');document.title='HDR Aduro Home';
+ const br=document.querySelector('.brand');if(br&&br.lastChild)br.lastChild.textContent='HDR Aduro Home'}
+function webLogin(){const l=document.getElementById('login');if(l.hidden){l.hidden=false;setTimeout(()=>document.getElementById('loginCode').focus(),50)}}
+async function webPair(){const code=document.getElementById('loginCode').value.trim(),m=document.getElementById('loginMsg');m.textContent='Kopple …';
+ const id=(crypto.randomUUID?crypto.randomUUID():'b-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+ const ua=navigator.userAgent,name='Browser'+(/Android/.test(ua)?' (Android)':/iPhone|iPad/.test(ua)?' (iPhone)':/Windows/.test(ua)?' (Windows)':/Mac/.test(ua)?' (Mac)':'');
+ try{const r=await (await fetch('api/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,name,id,kind:'browser'})})).json();
+  if(r.error){m.textContent=r.error;return}try{localStorage.setItem('ofenTok',r.data.token)}catch(e){}location.reload()}
+ catch(e){m.textContent='Raspi nicht erreichbar'}}
 const $=id=>document.getElementById(id);
 const RUN=['2','4','5','6','9','11','32'];
 /* Alarme: Ofen steht und startet nicht von selbst – mit Hinweis, was zu tun ist */
@@ -597,6 +672,7 @@ document.addEventListener('click',e=>{if(e.target.closest('#vpnBtn,#vpnHomeBtn')
 async function offline(e){
  $('hero').dataset.mode='err';$('bigV').textContent='–';$('m1').textContent='–';$('m2').textContent='–';$('gauge').hidden=true;$('powerBtn').disabled=true;
  $('state').textContent='Keine Verbindung';
+ try{ctlRenderBar(await api('control'))}catch(x){}
  let n={route:'none'};try{n=await api('net')}catch(x){}
  $('vpnBtn').href=vpnLink();
  if(n.route==='wlan'){setNet('bad','Keine Antwort');$('substate').textContent='Im Heim-WLAN, aber der Ofen meldet sich nicht. Ist er eingeschaltet?';$('vpnBox').hidden=true}
@@ -609,8 +685,59 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()}
 /* Status */
 function wood(s){const a=$('woodAlert');if(s.wood_warn){$('woodT').textContent='Rauchgas '+num(s.smoke_temp)+' °C – unter '+num(s.wood_min)+' °C. Holz nachlegen?';a.hidden=false;
  if(!woodWas){try{Ofen.vibrate()}catch(e){}}}else a.hidden=true;woodWas=!!s.wood_warn}
+/* Steuerung (Raspi ↔ Handys) */
+let CTL=null;
+function ctlText(c){if(!c||!c.linked)return null;
+ const ago=x=>x<60?'vor '+x+' s':'vor '+Math.round(x/60)+' min',nm=c.name&&c.name!=='Raspi'?' „'+c.name+'“':'';
+ if(c.role==='raspi'){
+  if(c.kind==='raspi')return c.guard_s>0?['Startschutz: noch '+c.guard_s+' s','Wartet, ob ein Handy per Notfall-Übernahme steuert','Jetzt starten','take','warn']:['Steuerung: dieser Raspi','Automatiken laufen hier','Freigeben','release',''];
+  if(c.kind==='phone')return ['Steuerung: Handy'+nm,'Automatiken laufen dort'+(c.phone_seen_s!=null?' · gemeldet '+ago(c.phone_seen_s):''),'Übernehmen','take','away'];
+  return ['Steuerung freigegeben','Keine Automatik aktiv','Übernehmen','take','warn']}
+ if(c.holder){if(c.forced)return ['Notfall-Steuerung: dieses Handy',c.reachable?'Raspi wieder erreichbar – wird abgeglichen':'Raspi nicht erreichbar – Automatiken laufen hier','Freigeben','release','warn'];
+  return c.active?['Steuerung: dieses Handy','Automatiken laufen hier · Raspi verbunden','Freigeben','release','']:['Steuerung: dieses Handy','Raspi nicht erreichbar – Automatik pausiert','Freigeben','release','bad']}
+ if(!c.reachable)return ['Raspi nicht erreichbar','Nur Anzeige – Automatiken laufen auf dem Raspi, falls er noch läuft','Notfall','force','bad'];
+ if(c.kind==='none')return ['Steuerung freigegeben','Keine Automatik aktiv','Übernehmen','take','warn'];
+ return ['Steuerung: '+(c.kind==='phone'?'Handy'+nm:'Raspi'+nm),'Dieses Handy zeigt den Raspi an','Übernehmen','take','away']}
+function ctlRenderBar(c){if(c)CTL=c;const t=ctlText(CTL),b=$('ctlBar');if(!t){b.hidden=true;return}b.hidden=false;
+ $('ctlT').textContent=t[0];$('ctlS').textContent=t[1];$('ctlBtn').textContent=t[2];$('ctlBtn').dataset.a=t[3];b.className='ctlbar'+(t[4]?' '+t[4]:'')}
+function ctlAction(){const a=$('ctlBtn').dataset.a;if(a==='take')ctlTake();else if(a==='release')ctlRelease();else if(a==='force')ctlForce()}
+function ctlAfter(){setTimeout(refresh,400);if(setPage==='link')lkLoad()}
+async function ctlTake(){const c=CTL||{};
+ if(c.role==='raspi'&&c.kind==='raspi'){try{ctlRenderBar(await api('control/take',{}))}catch(e){toast(e.message,true)}return ctlAfter()}
+ const msg=c.role==='raspi'?'Steuerung auf den Raspi holen?\n\nDie Automatiken laufen dann hier'+(c.kind==='phone'?' – das Handy „'+c.name+'“ hört sofort damit auf.':'.')
+  :'Steuerung auf dieses Handy übernehmen?\n\nDie Automatiken laufen dann auf diesem Handy, der Raspi hört damit auf. Das Handy muss erreichbar bleiben (Heim-WLAN oder VPN) – meldet es sich 3 Minuten nicht, holt sich der Raspi die Steuerung zurück.';
+ if(!confirm(msg))return;try{ctlRenderBar(await api('control/take',{}));toast('Steuerung übernommen')}catch(e){toast(e.message,true)}ctlAfter()}
+async function ctlRelease(){const c=CTL||{};
+ const msg=c.role==='raspi'?'Steuerung freigeben?\n\nDann läuft KEINE Automatik mehr (Raumsteuerung, Auto-Heizstufe, Pellet-Neustart, Heizkörper). Geschlossene Heizkörper gehen zurück auf den Wochenplan. Ein Handy kann danach übernehmen.'
+  :'Steuerung an den Raspi zurückgeben?\n\nEr macht mit allen Einstellungen und dem aktuellen Zustand weiter.';
+ if(!confirm(msg))return;try{ctlRenderBar(await api('control/release',{}));toast('Steuerung freigegeben')}catch(e){toast(e.message,true)}ctlAfter()}
+async function ctlForce(){if(!confirm('Notfall-Übernahme?\n\nNur nutzen, wenn der Raspi wirklich aus oder defekt ist. Dieses Handy führt dann die Automatiken allein aus. Meldet sich der Raspi wieder, wird abgeglichen.'))return;
+ try{ctlRenderBar(await api('control/force',{}));toast('Dieses Handy steuert jetzt')}catch(e){toast(e.message,true)}ctlAfter()}
+/* Einstellungsseite „Raspi & Handys“ */
+let LK=null,lkT=null;
+async function lkLoad(){try{LK=await api('link');ctlRenderBar(await api('control'))}catch(e){toast(e.message,true);return}
+ const c=CTL||{},r=LK.role==='raspi',t=ctlText(c);
+ $('lkCtl').textContent=t?t[0]+' – '+t[1]:'Kein Raspi gekoppelt – dieses Handy steuert allein.';
+ $('lkRaspi').hidden=!r;$('lkPhone').hidden=r;
+ $('lkTake').hidden=!c.linked||(c.holder&&!(r&&c.guard_s>0));$('lkRel').hidden=!c.linked||!c.holder;$('lkForce').hidden=r||!c.linked||c.holder||!!c.reachable;
+ if(r){$('lkCode').textContent=LK.code;$('lkCodeS').textContent='noch '+Math.max(1,Math.ceil(LK.code_s/60))+' min gültig · nur einmal verwendbar';
+  const ad=(LK.addrs||[]).filter(a=>!/^169\.254/.test(a));$('lkUrl').textContent=ad.length?ad.join(' oder '):'(IP des Raspi)';
+  $('lkClients').innerHTML=(LK.clients||[]).length?LK.clients.map(x=>`<div class="lkrow"><div><b>${esc(x.name)}</b><span>${x.kind==='phone'?'App':'Browser'} · gekoppelt am ${new Date(x.at).toLocaleDateString('de-DE')}${x.seen_s>=0?' · zuletzt '+(x.seen_s<90?'gerade eben':'vor '+Math.round(x.seen_s/60)+' min'):''}</span></div><button data-id="${esc(x.id)}">Entfernen</button></div>`).join(''):'<p class="mute" style="margin:0">Noch keine.</p>';
+  $('lkClients').querySelectorAll('button').forEach(b=>b.onclick=async()=>{if(!confirm('Gerät entfernen? Es muss danach neu gekoppelt werden.'))return;try{await api('link/remove',{id:b.dataset.id});toast('Entfernt')}catch(e){toast(e.message,true)}lkLoad()});
+  $('lkBack').checked=!!LK.auto_back;if(document.activeElement!==$('lkName'))$('lkName').value=LK.name||''}
+ else{$('lkPairBox').hidden=!!LK.linked;$('lkPaired').hidden=!LK.linked;
+  if(LK.linked)$('lkPairT').textContent='Gekoppelt mit Raspi „'+(LK.raspi_name||'Raspi')+'“ ('+String(LK.url||'').replace(/^https?:\/\//,'')+')'+(LK.reachable?'':' – gerade nicht erreichbar');
+  if(!$('lkAddr').value&&LK.url)$('lkAddr').value=LK.url.replace(/^https?:\/\//,'').replace(/:8080$/,'')}
+ clearTimeout(lkT);lkT=setTimeout(()=>{if(setPage==='link'&&curTab==='set')lkLoad()},15000)}
+async function lkPair(){const url=$('lkAddr').value.trim(),code=$('lkPin').value.trim();if(!url||!code){toast('Adresse und Code eintragen',true);return}
+ toast('Kopple mit dem Raspi …');try{await api('link/pair',{url,code});$('lkPin').value='';toast('Gekoppelt – Einstellungen vom Raspi übernommen');await loadCfg();HM=null}catch(e){toast(e.message,true)}lkLoad();refresh()}
+async function lkUnpair(){if(!confirm('Vom Raspi entkoppeln?\n\nHat dieses Handy die Steuerung, geht sie vorher an den Raspi zurück. Die Automatiken auf diesem Handy werden ausgeschaltet, damit nicht zwei Geräte regeln. Der Ofen-Zugang bleibt erhalten.'))return;
+ try{await api('link/unpair',{});toast('Entkoppelt')}catch(e){toast(e.message,true)}await loadCfg();lkLoad();refresh()}
+async function lkNewCode(){try{await api('link/code',{})}catch(e){toast(e.message,true)}lkLoad()}
+async function lkSaveName(){try{await api('link/name',{name:$('lkName').value});toast('Gespeichert')}catch(e){toast(e.message,true)}lkLoad()}
+$('lkBack').addEventListener('change',()=>api('link/auto_back',{on:$('lkBack').checked}).then(()=>toast($('lkBack').checked?'Steuerung geht zurück an den Raspi':'Steuerung wird freigegeben statt zurückgegeben')).catch(e=>toast(e.message,true)));
 function render(s){
- S=s;const w=!!s.wood_mode,running=RUN.includes(s.state)||w;
+ S=s;ctlRenderBar(s.control);const w=!!s.wood_mode,running=RUN.includes(s.state)||w;
  const al=ALARM[String(s.state)];
  const hal=!!s.halted;
  $('hero').dataset.mode=hal?'halt':al?'alarm':w?(s.wood_warn?'low':'wood'):(running?'run':'off');
@@ -832,12 +959,13 @@ $('thT').addEventListener('change',()=>api('config',{hm_ctrl_target:$('thT').val
 const SVG=p=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';
 const PAGES=[
  {id:'conn',t:'Ofen & Verbindung',c:'linear-gradient(135deg,#3b82f6,#06b6d4)',i:SVG('<path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5.5 12.2a10 10 0 0 1 13 0"/><path d="M9 15.8a5 5 0 0 1 6 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/>')},
+ {id:'link',t:'Raspi & Handys',c:'linear-gradient(135deg,#6366f1,#22c7e8)',i:SVG('<path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>')},
  {id:'pellet',t:'Pellets & Holz',c:'linear-gradient(135deg,#ff8a3d,#ff4f6d)',i:SVG('<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.4 1.2-4 2.4-5.2.3 1.5 1 2.5 2 3C11 8 11.5 5.3 12 3z"/>')},
  {id:'hm',t:'Homematic IP',c:'linear-gradient(135deg,#22c55e,#0fb5a6)',i:SVG('<path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/>')},
  {id:'xpm',t:'Expertenmodus',c:'linear-gradient(135deg,#f59e0b,#ef4444)',i:SVG('<path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5"/><circle cx="12" cy="18" r=".8" fill="currentColor"/>')},
  {id:'outs',xp:1,t:'Gebläse & Ausgänge',c:'linear-gradient(135deg,#0fb5a6,#22c7e8)',i:SVG('<path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/>')},
  {id:'look',t:'Darstellung',c:'linear-gradient(135deg,#f472b6,#fb923c)',i:SVG('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/>')},
- {id:'bg',t:'Hintergrund & Benachrichtigungen',c:'linear-gradient(135deg,#8b5cf6,#ec4899)',i:SVG('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>')},
+ {id:'bg',app:1,t:'Hintergrund & Benachrichtigungen',c:'linear-gradient(135deg,#8b5cf6,#ec4899)',i:SVG('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>')},
  {id:'expert',xp:1,t:'Alle Ofen-Werte',c:'linear-gradient(135deg,#64748b,#334155)',i:SVG('<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>')},
 ];
 let setPage=null,CFG={};
@@ -848,15 +976,16 @@ function menuSub(id){try{
  if(id==='outs'){const n=Object.keys(man.names||{}).length;return n?n+' benannt'+(man.fresh_air_bit!=null?' · Frischluftgebläse':''):'noch keine benannt'}
  if(id==='bg'){const b=JSON.parse(Ofen.bgInfo());return (b.notif_ok?(CFG.notify_state!==false?'Benachrichtigungen + Zustände':'Benachrichtigungen an'):'Benachrichtigungen aus')+' · Akku-Optimierung '+(b.battery_ok?'aus':'an')}
  if(id==='expert')return 'Jeden Wert einzeln lesen und ändern';
+ if(id==='link'){const t=ctlText(CTL);return t?t[0]:(CTL&&CTL.role==='raspi'?'':'kein Raspi gekoppelt')}
  if(id==='look')return BGPH?'eigenes Hintergrundbild':'kein Hintergrundbild';
  if(id==='xpm')return XP?'an – sicherheitsrelevante Funktionen freigeschaltet':'aus';
 }catch(e){}return ''}
-function buildMenu(){$('setMenu').innerHTML=PAGES.filter(p=>XP||!p.xp).map(p=>`<div class="mi" data-p="${p.id}"><div class="mic" style="background:${p.c}">${p.i}</div><div class="mt"><b>${p.t}</b><span>${esc(menuSub(p.id))}</span></div><div class="chev">›</div></div>`).join('');
+function buildMenu(){$('setMenu').innerHTML=PAGES.filter(p=>(XP||!p.xp)&&!(WEB&&p.app)).map(p=>`<div class="mi" data-p="${p.id}"><div class="mic" style="background:${p.c}">${p.i}</div><div class="mt"><b>${p.t}</b><span>${esc(menuSub(p.id))}</span></div><div class="chev">›</div></div>`).join('');
  $('setMenu').querySelectorAll('.mi').forEach(m=>m.onclick=()=>openPage(m.dataset.p))}
 function openPage(id,dir){setPage=id;const P=PAGES.find(p=>p.id===id);
  $('setTitle').textContent=P?P.t:'Einstellungen';$('setMenu').hidden=!!id;
  document.querySelectorAll('#t-set [data-pg]').forEach(c=>c.hidden=c.dataset.pg!==id);
- if(id==='pellet'){loadPstop();hopCfgLoad()}if(id==='bg'){bgRefresh();loadCfg()}if(id==='hm')hmLoad();
+ if(id==='pellet'){loadPstop();hopCfgLoad()}if(id==='bg'){bgRefresh();loadCfg()}if(id==='hm')hmLoad();if(id==='link')lkLoad();
  if(!id){loadCfg().then(buildMenu);if(HM===null)hmLoad().then(buildMenu)}
  const sec=$('t-set');sec.classList.remove('inL','inR');void sec.offsetWidth;sec.classList.add((dir??1)>0?'inL':'inR');window.scrollTo(0,0)}
 /* Funktionen starten / beenden (beenden = bisheriges „App beenden“) */
