@@ -169,9 +169,9 @@ body.inset .dots{display:none}
 .seg.ctl{margin-top:14px}.seg.ctl[hidden]{display:none}.seg.ctl button{padding:9px 6px;font-size:13.5px}
 #vlBox[hidden],#valveHome[hidden],#vpnHome[hidden]{display:none}
 #appBg{position:fixed;inset:0;z-index:-1;background:center/cover no-repeat;pointer-events:none}#appBg[hidden]{display:none}
-#appBg::after{content:"";position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 55%,transparent)}
-body.hasbg{background:var(--bg)}body.hasbg .card,body.hasbg .fnbar,body.hasbg .power.stop,body.hasbg .power.off{background:color-mix(in srgb,var(--card) 80%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
-body.hasbg .hero[data-mode=err],body.hasbg .hero[data-mode=off]{background:color-mix(in srgb,var(--card) 80%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+#appBg::after{content:"";position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 35%,transparent)}
+body.hasbg{background:var(--bg)}body.hasbg .card,body.hasbg .fnbar,body.hasbg .power.stop,body.hasbg .power.off{background:color-mix(in srgb,var(--card) 66%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(14px)}
+body.hasbg .hero[data-mode=err],body.hasbg .hero[data-mode=off]{background:color-mix(in srgb,var(--card) 66%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(14px)}
 .setupBtn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:4px}.setupBtn svg{width:22px;height:22px}
 .found{display:flex;flex-direction:column;gap:8px;margin-top:10px}.found button{text-align:left;font-weight:600}.found button small{display:block;color:var(--mute);font-weight:500;font-size:12.5px}
 .okbox{margin-top:12px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--go) 14%,transparent);font-weight:600;font-size:14px}.okbox.bad{background:color-mix(in srgb,var(--bad) 14%,transparent)}.okbox[hidden]{display:none}
@@ -277,7 +277,7 @@ body:not(.appoff) #offCard{display:none}
     <div class="duo" id="duo"><div><h2>Heizstufe</h2>
     <div class="seg" id="lv"><button data-l="1" onclick="power(1)">Niedrig</button><button data-l="2" onclick="power(2)">Mittel</button><button data-l="3" onclick="power(3)">Hoch</button></div></div>
     <div class="xp" id="ctlCol" hidden><h2>Regelung nach</h2><div class="seg ctl" id="ctlSeg" hidden><button data-c="ofen" onclick="setCtl('ofen')">Ofen-Fühler</button><button data-c="hm" onclick="setCtl('hm')">Homematic</button></div></div></div>
-    <div class="tgl apRow"><div><b>Automatisch anpassen</b><span class="mute" id="apT">Stufe sinkt nahe am Ziel und steigt, wenn es kälter wird</span></div>
+    <div class="tgl apRow"><div><b>Heizstufe automatisch anpassen</b><span class="mute" id="apT">Stufe sinkt nahe am Ziel und steigt, wenn es kälter wird</span></div>
       <label class="sw"><input type="checkbox" id="apOn"><i></i></label></div>
     <div class="step"><button onclick="bump(-1)">−</button><div class="v"><span id="tv">–</span><small id="tvL">Raum-Zieltemperatur</small></div><button onclick="bump(1)">+</button></div>
   </div>
