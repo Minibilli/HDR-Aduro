@@ -2,7 +2,7 @@ name: APK bauen
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, raspi ]
   workflow_dispatch:
 
 permissions:
@@ -47,6 +47,8 @@ jobs:
 
       # Immer die neueste Version unter "Releases" -> leicht auf dem Handy herunterladbar
       - name: Release aktualisieren
+        # nur die fertige Version (main) – Testbereiche landen nur unter „Actions“ zum Herunterladen
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
