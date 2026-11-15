@@ -167,11 +167,11 @@ body.inset .dots{display:none}
 .mrow b{font-variant-numeric:tabular-nums}
 .raw{font:12.5px/1.5 ui-monospace,monospace;overflow-wrap:anywhere;color:var(--mute);margin-top:10px}
 .seg.ctl{margin-top:14px}.seg.ctl[hidden]{display:none}.seg.ctl button{padding:9px 6px;font-size:13.5px}
-#vlBox[hidden],#valveHome[hidden],#vpnHome[hidden]{display:none}
+#bgSl[hidden],#vlBox[hidden],#valveHome[hidden],#vpnHome[hidden]{display:none}
 #appBg{position:fixed;inset:0;z-index:-1;background:center/cover no-repeat;pointer-events:none}#appBg[hidden]{display:none}
-#appBg::after{content:"";position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 35%,transparent)}
-body.hasbg{background:var(--bg)}body.hasbg .card,body.hasbg .fnbar,body.hasbg .power.stop,body.hasbg .power.off{background:color-mix(in srgb,var(--card) 66%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(14px)}
-body.hasbg .hero[data-mode=err],body.hasbg .hero[data-mode=off]{background:color-mix(in srgb,var(--card) 66%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(14px)}
+#appBg::after{content:"";position:absolute;inset:0;background:color-mix(in srgb,var(--bg) var(--bgDim,35%),transparent)}
+body.hasbg{background:var(--bg)}body.hasbg .card,body.hasbg .fnbar,body.hasbg .power.stop,body.hasbg .power.off{background:color-mix(in srgb,var(--card) var(--cardA,66%),transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(14px)}
+body.hasbg .hero[data-mode=err],body.hasbg .hero[data-mode=off]{background:color-mix(in srgb,var(--card) var(--cardA,66%),transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(14px)}
 .setupBtn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:4px}.setupBtn svg{width:22px;height:22px}
 .found{display:flex;flex-direction:column;gap:8px;margin-top:10px}.found button{text-align:left;font-weight:600}.found button small{display:block;color:var(--mute);font-weight:500;font-size:12.5px}
 .okbox{margin-top:12px;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--go) 14%,transparent);font-weight:600;font-size:14px}.okbox.bad{background:color-mix(in srgb,var(--bad) 14%,transparent)}.okbox[hidden]{display:none}
@@ -366,6 +366,8 @@ body:not(.appoff) #offCard{display:none}
     <p class="mute" style="margin-top:0">Ein eigenes Foto, z. B. von deinem Ofen, als Hintergrund der ganzen App. Es bleibt nur auf diesem Handy.</p>
     <div class="bgprev" id="bgPrev">kein Foto</div>
     <div class="row"><button class="fire" onclick="bgPick()">Foto wählen</button><button id="bgDel" onclick="bgClear()">Entfernen</button></div>
+    <div id="bgSl"><label>Bild abdunkeln</label><div class="slide"><input type="range" id="bgDimR" min="0" max="80" step="5"><b id="bgDimV">–</b></div>
+    <label>Deckkraft der Karten</label><div class="slide"><input type="range" id="cardAR" min="30" max="100" step="5"><b id="cardAV">–</b></div></div>
   </div>
   <div class="card" id="bgCard" data-pg="bg">
     <h2>Hintergrund-Überwachung</h2>
@@ -713,7 +715,7 @@ $('woodMin').addEventListener('input',()=>$('woodV').textContent=$('woodMin').va
 $('woodMin').addEventListener('change',()=>{api('config',{wood_min:$('woodMin').value}).then(()=>toast('Warnung unter '+$('woodMin').value+' °C')).catch(e=>toast(e.message,true))});
 $('reT').addEventListener('input',()=>$('reV').textContent=$('reT').value+' °C');
 $('reT').addEventListener('change',()=>{api('config',{early_restart_temp:$('reT').value}).then(()=>toast('Pelletstart unter '+$('reT').value+' °C')).catch(e=>toast(e.message,true))});
-async function loadCfg(first){try{const c=await api('config');CFG=c;$('ipChg').textContent=c.ip_changed_at?' (zuletzt am '+new Date(c.ip_changed_at).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+': '+(c.ip_old||'?')+' → '+c.ip+')':'';setAppOn(c.app_on);setHm(c.hm);setXp(c.expert);$('xpOn').checked=!!c.expert;$('nsOn').checked=c.notify_state!==false;$('apOn').checked=!!c.auto_power;$('woodV').textContent=(c.wood_min||150)+' °C';$('reT').value=c.early_restart_temp||100;$('reV').textContent=(c.early_restart_temp||100)+' °C';$('reBox').hidden=!c.early_restart;$('esOn').checked=!!c.early_stop;$('esRe').checked=!!c.early_restart;$('esT').value=c.early_temp||240;$('esV').textContent=(c.early_temp||240)+' °C';esShow();$('ip').value=c.ip||'';$('serial').value=c.serial||'';$('woodMin').value=c.wood_min||150;
+async function loadCfg(first){try{const c=await api('config');CFG=c;$('ipChg').textContent=c.ip_changed_at?' (zuletzt am '+new Date(c.ip_changed_at).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+': '+(c.ip_old||'?')+' → '+c.ip+')':'';setAppOn(c.app_on);setHm(c.hm);setXp(c.expert);$('xpOn').checked=!!c.expert;$('nsOn').checked=c.notify_state!==false;lookApply(c.bg_dim??35,c.card_alpha??66);$('apOn').checked=!!c.auto_power;$('woodV').textContent=(c.wood_min||150)+' °C';$('reT').value=c.early_restart_temp||100;$('reV').textContent=(c.early_restart_temp||100)+' °C';$('reBox').hidden=!c.early_restart;$('esOn').checked=!!c.early_stop;$('esRe').checked=!!c.early_restart;$('esT').value=c.early_temp||240;$('esV').textContent=(c.early_temp||240)+' °C';esShow();$('ip').value=c.ip||'';$('serial').value=c.serial||'';$('woodMin').value=c.wood_min||150;
  vpnApp=c.vpn_app||vpnApp;$('vpnApp').value=vpnApp;if(first&&(!c.ip||!c.serial||!c.has_pin)){tab('set');openPage('conn')}}catch(e){}}
 async function saveCfg(){try{await api('config',{ip:$('ip').value,serial:$('serial').value,pin:$('pin').value,vpn_app:$('vpnApp').value});
  vpnApp=$('vpnApp').value;$('pin').value='';toast('Gespeichert');refresh()}catch(e){toast(e.message,true)}}
@@ -731,9 +733,13 @@ async function setupRun(ser,pin){connMsg('Gelesen: Seriennummer '+(ser||'–')+(
  }catch(e){connMsg(e.message,true);if(ser)$('serial').value=ser;if(pin)$('pin').value=pin;$('connMan').open=true}}
 let BGPH='';
 function applyBg(u){BGPH=u||'';const h=$('appBg');h.hidden=!BGPH;h.style.backgroundImage=BGPH?`url("${BGPH}")`:'';document.body.classList.toggle('hasbg',!!BGPH);
- const p=$('bgPrev');p.style.backgroundImage=BGPH?`url("${BGPH}")`:'';p.textContent=BGPH?'':'kein Foto';$('bgDel').hidden=!BGPH}
+ const p=$('bgPrev');p.style.backgroundImage=BGPH?`url("${BGPH}")`:'';p.textContent=BGPH?'':'kein Foto';$('bgDel').hidden=!BGPH;$('bgSl').hidden=!BGPH}
 function bgPick(){try{Ofen.pickBackground()}catch(e){toast('Geht nur in der App',true)}}
 function bgClear(){try{Ofen.clearBackground()}catch(e){}applyBg('');toast('Foto entfernt')}
+function lookApply(d,a){d=+d;a=+a;document.documentElement.style.setProperty('--bgDim',d+'%');document.documentElement.style.setProperty('--cardA',a+'%');
+ $('bgDimR').value=d;$('bgDimV').textContent=d+' %';$('cardAR').value=a;$('cardAV').textContent=a+' %'}
+let lookT=0;['bgDimR','cardAR'].forEach(id=>$(id).addEventListener('input',()=>{lookApply($('bgDimR').value,$('cardAR').value);clearTimeout(lookT);
+ lookT=setTimeout(()=>api('config',{bg_dim:+$('bgDimR').value,card_alpha:+$('cardAR').value}).catch(e=>toast(e.message,true)),400)}));
 window.__bgSet=(u,err)=>{if(err){toast(err,true);return}applyBg(u);toast('Foto übernommen')};
 try{applyBg(Ofen.backgroundPhoto())}catch(e){}
 

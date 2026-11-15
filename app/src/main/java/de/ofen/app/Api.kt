@@ -41,6 +41,7 @@ object Api {
                 .put("early_restart_temp", c.optInt("early_restart_temp", 100))
                 .put("notify_state", c.optBoolean("notify_state", true))
                 .put("auto_power", c.optBoolean("auto_power"))
+                .put("bg_dim", c.optInt("bg_dim", 35)).put("card_alpha", c.optInt("card_alpha", 66))
                 .put("ip_changed_at", c.optLong("ip_changed_at")).put("ip_old", c.optString("ip_old"))
                 .put("expert", c.optBoolean("expert")).put("expert_ver", Stove.EXPERT_TEXT_VERSION)
                 .put("hm", Hmip.connected()))
@@ -95,6 +96,8 @@ object Api {
                 if (b.has("early_restart_temp")) b.optString("early_restart_temp").toDoubleOrNull()?.let { c.put("early_restart_temp", it.toInt().coerceIn(50, 200)) }
                 if (b.has("notify_state")) c.put("notify_state", b.optBoolean("notify_state"))
                 if (b.has("auto_power")) c.put("auto_power", b.optBoolean("auto_power"))
+                if (b.has("bg_dim")) c.put("bg_dim", b.optInt("bg_dim").coerceIn(0, 80))
+                if (b.has("card_alpha")) c.put("card_alpha", b.optInt("card_alpha").coerceIn(30, 100))
                 if (b.has("hm_ctrl")) {
                     if (c.optBoolean("hm_ctrl") && !b.optBoolean("hm_ctrl")) Stove.restoreBoilerTarget(c)
                     c.put("hm_ctrl", b.optBoolean("hm_ctrl"))
