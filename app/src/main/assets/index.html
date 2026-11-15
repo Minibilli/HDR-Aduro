@@ -214,7 +214,21 @@ body.noxp .xp{display:none!important}
 .scan svg{width:24px;height:24px}
 /* Funktionen starten/beenden */
 .fnbar{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:18px;padding:10px 14px;margin-bottom:12px;box-shadow:var(--shadow)}
-.apRow{margin:14px 0 14px}
+.fnHead{margin:0 0 0 2px}body.appoff .fnHead{display:none}
+.meta .pbtn{flex:0 0 60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:5px 0;border-radius:12px;font-size:12px;font-weight:800;background:rgba(255,255,255,.92);color:#0f9f76;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.meta .pbtn svg{width:20px;height:20px}.meta .pbtn.stop{color:#e11d48}.meta .pbtn.off{color:#475569}.meta .pbtn[hidden]{display:none}.meta .pbtn:disabled{opacity:.5}
+.hero .hop{margin:10px 0 0;cursor:pointer;background:none;padding:0;box-shadow:none;border-radius:0}.hero .hop .hbar{height:24px;background:color-mix(in srgb,currentColor 16%,transparent)}
+.hero .hop .hbar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;white-space:nowrap;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.45)}
+.hero .hop.low .hbar i{background:linear-gradient(90deg,#ff5d73,#d6164a)}
+#pelletCard{padding:14px 16px}#pelletCard h2{margin:0 0 8px}
+.h2r{display:flex;align-items:center;gap:8px}.h2r h2{flex:1}.apMini{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:12px;font-weight:800;color:var(--mute);cursor:pointer}
+.sw.sm{position:relative;width:40px;height:24px;flex:0 0 40px;display:inline-block}.sw.sm i::after{width:18px;height:18px}.sw.sm input:checked+i::after{transform:translateX(16px)}
+.apT{font-size:12.5px;color:var(--mute);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.apT[hidden]{display:none}
+.duo.two .seg button{padding:7px 6px;font-size:14px}.seg button{padding:9px 6px}
+#pelletCard .step{margin-top:10px}#pelletCard .step button{width:44px;height:44px;flex:0 0 44px;font-size:22px}#pelletCard .step .v{font-size:28px}
+.hints{display:flex;gap:8px;margin:-4px 0 6px}.hint{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;font-weight:700;padding:7px 11px;border-radius:999px;background:color-mix(in srgb,var(--fire) 16%,var(--card));cursor:pointer}
+.hint[hidden]{display:none}.hint.cold{background:color-mix(in srgb,#3b82f6 22%,var(--card));flex:0 0 auto}
+#upd{display:none}
 .duo{display:flex;gap:12px;align-items:stretch}.duo>div{flex:1;min-width:0;display:flex;flex-direction:column}.duo>div[hidden]{display:none}
 .duo.two .seg{flex-direction:column;flex:1}.duo.two .seg button{flex:1;padding:10px 6px;font-size:14px}.duo .seg.ctl{margin-top:0}.apRow span{font-size:12.5px}
 .fnbar b{font-size:15px}.fnbar span{font-size:12.5px;color:var(--go);font-weight:700}.fnbar .sw{margin-left:auto}
@@ -232,6 +246,7 @@ body:not(.appoff) #offCard{display:none}
 <header>
   <div class="brand"><svg viewBox="0 0 24 24"><defs><linearGradient id="fl" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff4f6d"/><stop offset="1" stop-color="#ffb13d"/></linearGradient></defs><path fill="url(#fl)" d="M12 2c1 3.5 5.5 5.6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.6 1.3-4.3 2.6-5.6.3 1.7 1 2.8 2.2 3.3C10.9 7.7 11.4 4.6 12 2z"/></svg>HDR Aduro</div>
   <span class="net" id="net"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5.5 12.2a10 10 0 0 1 13 0"/><path d="M9 15.8a5 5 0 0 1 6 0"/><circle cx="12" cy="19.5" r="1.2" fill="currentColor"/></svg><span id="netT">Verbinde …</span></span>
+  <label class="sw fnHead" id="fnHead" title="Funktionen an/aus"><input type="checkbox" id="fnOn" checked><i></i></label>
   <button class="gear" id="gearBtn" onclick="tab(curTab==='set'?lastMain:'set')" aria-label="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
 </header>
 <div class="alert" id="woodAlert" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5"/><circle cx="12" cy="18" r=".8" fill="currentColor"/></svg><span id="woodT"></span></div>
@@ -244,7 +259,6 @@ body:not(.appoff) #offCard{display:none}
     <p>Die App verbindet sich erst mit dem Ofen, wenn du startest. Dann laufen auch Überwachung, Warnungen und Automatiken – auch im Hintergrund.</p>
     <button class="power" style="margin:0" onclick="fnStart()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/></svg>Funktionen starten</button>
   </div>
-  <div class="fnbar" id="fnBar"><b>Funktionen</b><span>laufen</span><label class="sw"><input type="checkbox" id="fnOn" checked><i></i></label></div>
   <div class="hero" id="hero" data-mode="err">
     <span class="chip"><i></i><span id="state">Verbinde …</span></span>
     <div class="fanbadge" id="fanBadge" hidden onclick="tab('fan')" title="Gebläse läuft von Hand">
@@ -257,35 +271,29 @@ body:not(.appoff) #offCard{display:none}
     <div class="big"><b id="bigV">–</b><span>°C</span></div>
     <div class="blabel" id="bigL">Raumtemperatur</div>
     <div class="gauge" id="gauge" hidden><i id="gFill"></i><b></b></div>
-    <div class="meta"><div><b id="m1">–</b><small id="m1l">Ziel</small></div><div><b id="m2">–</b><small id="m2l">Rauchgas</small></div></div>
+    <div class="meta"><div><b id="m1">–</b><small id="m1l">Ziel</small></div><div><b id="m2">–</b><small id="m2l">Rauchgas</small></div>
+      <button class="pbtn off" id="haltBtn" hidden onclick="haltNow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/></svg><span>Aus</span></button>
+      <button class="pbtn" id="powerBtn" onclick="powerToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/></svg><span id="powerT">Start</span></button></div>
+    <div class="hop" id="hopHome" hidden onclick="hopToggle()"><div class="hbar"><i id="hopFill"></i><em id="hopMark"></em><span id="hopT">–</span></div></div>
     <div class="vpnbox" id="vpnBox" hidden><p id="vpnMsg"></p><a class="btn fire" id="vpnBtn" href="#">VPN öffnen</a></div>
   </div>
 
-  <div class="prow"><button class="power" id="powerBtn" onclick="powerToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/></svg><span id="powerT">Starten</span></button>
-  <button class="power off" id="haltBtn" hidden onclick="haltNow()">Aus</button></div>
-
-  <div class="hop" id="hopHome" hidden>
-    <div onclick="hopToggle()"><div class="hl"><b>Pellets</b><span id="hopT">–</span></div>
-    <div class="hbar"><i id="hopFill"></i><em id="hopMark"></em></div></div>
-    <div id="hopPanel" hidden>
+  <div class="card" id="hopPanel" hidden>
       <div class="row"><button class="fire" id="hopFull" onclick="hopFill(null)">Voll</button><button onclick="hopFill(15,true)">+ 15 kg Sack</button></div>
       <div class="row"><input id="hopKg" type="number" inputmode="decimal" placeholder="Inhalt jetzt in kg"><button style="flex:0 0 90px" onclick="hopFill(+$('hopKg').value)">Setzen</button></div>
       <p class="mute" style="margin:8px 0 0">Der Ofen zählt ab dem eingetragenen Wert selbst herunter (Schnecke: <span id="hopAug">–</span> g / 6 min).</p>
     </div>
-  </div>
   <div class="card" id="pelletCard">
-    <div class="duo" id="duo"><div><h2>Heizstufe</h2>
+    <div class="duo" id="duo"><div><div class="h2r"><h2>Heizstufe</h2><label class="apMini" title="Heizstufe automatisch anpassen"><span>Auto</span><span class="sw sm"><input type="checkbox" id="apOn"><i></i></span></label></div>
     <div class="seg" id="lv"><button data-l="1" onclick="power(1)">Niedrig</button><button data-l="2" onclick="power(2)">Mittel</button><button data-l="3" onclick="power(3)">Hoch</button></div></div>
     <div class="xp" id="ctlCol" hidden><h2>Regelung nach</h2><div class="seg ctl" id="ctlSeg" hidden><button data-c="ofen" onclick="setCtl('ofen')">Ofen-Fühler</button><button data-c="hm" onclick="setCtl('hm')">Homematic</button></div></div></div>
-    <div class="tgl apRow"><div><b>Heizstufe automatisch anpassen</b><span class="mute" id="apT">Stufe sinkt nahe am Ziel und steigt, wenn es kälter wird</span></div>
-      <label class="sw"><input type="checkbox" id="apOn"><i></i></label></div>
+    <div class="apT" id="apT" hidden></div>
     <div class="step"><button onclick="bump(-1)">−</button><div class="v"><span id="tv">–</span><small id="tvL">Raum-Zieltemperatur</small></div><button onclick="bump(1)">+</button></div>
   </div>
   <div id="homeFan"></div>
-  <div class="thline homeTh" id="thHome" hidden onclick="tab('rooms')"></div>
   <div class="warn" id="vpnHome" hidden><b>Du bist im Heim-WLAN, aber das VPN ist noch an.</b> Die App spricht den Ofen dann über den Tunnel an statt direkt – das ist langsamer und störanfälliger. Am besten in WG Tunnel dein WLAN als vertrauenswürdig eintragen, dann geht das VPN zu Hause von selbst aus.
     <a class="btn" id="vpnHomeBtn" href="#" style="margin-top:10px">VPN-App öffnen</a></div>
-  <div class="thline homeTh" id="valveHome" hidden onclick="tab('set');openPage('hm')"></div>
+  <div class="hints" id="hints"><span class="hint" id="thHome" hidden onclick="tab('rooms')"></span><span class="hint" id="valveHome" hidden onclick="tab('set');openPage('hm')"></span></div>
   <p class="mute upd" id="upd"></p>
 </section>
 
@@ -575,9 +583,9 @@ async function offline(e){
  $('state').textContent='Keine Verbindung';
  let n={route:'none'};try{n=await api('net')}catch(x){}
  $('vpnBtn').href=vpnLink();
- if(n.route==='wlan'){setNet('bad','Ofen antwortet nicht');$('substate').textContent='Im Heim-WLAN, aber der Ofen meldet sich nicht. Ist er eingeschaltet?';$('vpnBox').hidden=true}
+ if(n.route==='wlan'){setNet('bad','Keine Antwort');$('substate').textContent='Im Heim-WLAN, aber der Ofen meldet sich nicht. Ist er eingeschaltet?';$('vpnBox').hidden=true}
  else if(n.route==='vpn'){setNet('bad','VPN · keine Antwort');$('substate').textContent='VPN ist an, aber der Ofen antwortet nicht.';$('vpnMsg').textContent='Prüfe in der VPN-App, ob der Tunnel verbunden ist.';$('vpnBox').hidden=false}
- else{setNet('bad','Kein WLAN · kein VPN');$('substate').textContent='';$('vpnMsg').textContent='Du bist nicht im Heim-WLAN. Schalte das VPN ein – die App verbindet sich dann von selbst.';$('vpnBox').hidden=false}
+ else{setNet('bad','Offline');$('substate').textContent='';$('vpnMsg').textContent='Du bist nicht im Heim-WLAN. Schalte das VPN ein – die App verbindet sich dann von selbst.';$('vpnBox').hidden=false}
 }
 function schedule(ms){clearTimeout(nextT);nextT=setTimeout(()=>{if(!document.hidden)refresh();else schedule(ms)},ms)}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
@@ -601,7 +609,7 @@ function render(s){
   $('m1').textContent=t1(th.target)+' °C';$('m1l').textContent='Ziel · Homematic';$('m2').textContent=num(s.smoke_temp)+' °C';$('m2l').textContent='Rauchgas';$('gauge').hidden=true
  }else{$('bigV').textContent=num(s.room_temp,1);$('bigL').textContent='Raumtemperatur';
   $('m1').textContent=num(s.target_temp)+' °C';$('m1l').textContent='Ziel';$('m2').textContent=num(s.smoke_temp)+' °C';$('m2l').textContent='Rauchgas';$('gauge').hidden=true}
- const pb=$('powerBtn');pb.disabled=false;const stopMode=!hal&&running;pb.classList.toggle('stop',stopMode);$('powerT').textContent=stopMode?'Ausschalten':'Starten';
+ const pb=$('powerBtn');pb.disabled=false;const stopMode=!hal&&running;pb.classList.toggle('stop',stopMode);$('powerT').textContent=stopMode?'Aus':'Start';
  $('haltBtn').hidden=hal||running;
  $('pelletCard').hidden=w;
  placeFan();
@@ -612,7 +620,7 @@ function render(s){
  $('upd').textContent='Aktualisiert '+new Date().toLocaleTimeString('de-DE');
 }
 async function refresh(){if(!APPON)return;if(busy)return schedule(2000);try{const s=await api('status');lastOk=Date.now();online=true;$('vpnBox').hidden=true;
- const vh=s.route==='vpn'&&s.home_wifi;setNet('ok','Verbunden · '+(vh?'VPN an!':s.route==='vpn'?'VPN':'WLAN'));$('vpnHome').hidden=!vh;$('vpnHomeBtn').href=vpnLink();wood(s);render(s);manVisible();schedule(10000)}
+ const vh=s.route==='vpn'&&s.home_wifi;setNet('ok',(vh?'VPN an!':s.route==='vpn'?'VPN':'WLAN'));$('vpnHome').hidden=!vh;$('vpnHomeBtn').href=vpnLink();wood(s);render(s);manVisible();schedule(10000)}
  catch(e){if(/Funktionen sind aus/.test(e.message||'')){setAppOn(false);return}online=false;manVisible();await offline(e);schedule(4000)}}
 async function run(fn,ok){busy=true;try{await fn();toast(ok)}catch(e){toast(e.message,true)}busy=false;setTimeout(refresh,1500)}
 
@@ -623,8 +631,8 @@ function powerToggle(){const running=S&&(RUN.includes(S.state)||S.wood_mode);
 function haltNow(){if(!confirm('Ofen ausschalten?\n\nDer Ofen stoppt und alle Automatiken der App pausieren (Raumsteuerung, Pellet-Neustart, Heizkörper-Steuerung), bis du wieder „Starten“ drückst.'))return;
  if(S){S.halted=true;render(S)}run(()=>api('stop',{}),'Ausgeschaltet – Automatiken pausiert')}
 function power(l){run(async()=>{const r=await api('power',{level:l});if(r&&r.auto_off){$('apOn').checked=false;CFG.auto_power=false;setTimeout(()=>toast('Heizstufe '+['','niedrig','mittel','hoch'][l]+' – Automatik aus'),50)}return r},'Heizstufe '+['','niedrig','mittel','hoch'][l])}
-const AP_DEF='Stufe sinkt nahe am Ziel und steigt, wenn es kälter wird';
-function apRender(s){const a=s&&s.autopower;const on=!!(a&&a.enabled);if(document.activeElement!==$('apOn'))$('apOn').checked=on;$('apT').textContent=on?(a.msg||'aktiv'):AP_DEF}
+const AP_DEF='';
+function apRender(s){const a=s&&s.autopower;const on=!!(a&&a.enabled);if(document.activeElement!==$('apOn'))$('apOn').checked=on;$('apT').textContent=on?'Automatik: '+(a.msg||'aktiv'):AP_DEF;$('apT').hidden=!on}
 $('apOn').addEventListener('change',()=>{const on=$('apOn').checked;api('config',{auto_power:on}).then(()=>{CFG.auto_power=on;$('apT').textContent=on?'aktiv – wird beim nächsten Abruf angepasst':AP_DEF;toast(on?'Heizstufe automatisch':'Heizstufe von Hand');if(on)refresh()}).catch(e=>{$('apOn').checked=!on;toast(e.message,true)})});
 function bump(d){if(ctlHm()){thBump(d*0.5);$('tv').textContent=t1($('thT').value)+' °C';if($('m1l').textContent==='Ziel · Homematic')$('m1').textContent=t1($('thT').value)+' °C';return}
  if(target===null)target=20;target=Math.max(5,Math.min(35,target+d));$('tv').textContent=target+' °C';
@@ -751,8 +759,8 @@ const t1=v=>v==null||v===''||isNaN(+v)?'–':(+v).toFixed(1).replace('.',',');
 const ICO_WIN='<svg class="rw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M12 3v18M4 12h16"/></svg>';
 function renderRooms(s){const rs=s.rooms||[],th=s.thermo||{},conn=s.rooms!==undefined;setHm(conn);
  // Startseite: nur eine Zeile zur Raumsteuerung
- const vl=s.valve||{};if(vl.enabled&&hmOn||vl.closed){$('valveHome').hidden=false;$('valveHome').textContent='Heizkörper'+(vl.label?' '+vl.label:'')+' · '+(vl.msg||(vl.closed?'zu':'auf'))}else $('valveHome').hidden=true;
- if(th.enabled&&hmOn){$('thHome').hidden=false;$('thHome').textContent='Raumsteuerung'+(th.label?' · '+th.label+' '+t1(th.temp)+' °C → '+t1(th.target)+' °C':'')+(th.msg?' · '+th.msg:'')}else $('thHome').hidden=true;
+ const vl=s.valve||{};if(vl.enabled&&hmOn||vl.closed){$('valveHome').hidden=false;$('valveHome').textContent='Heizkörper '+(vl.closed?'zu':'auf');$('valveHome').classList.toggle('cold',!!vl.closed)}else $('valveHome').hidden=true;
+ if(th.enabled&&hmOn){$('thHome').hidden=false;$('thHome').textContent='Raum: '+(th.msg||'aktiv')}else $('thHome').hidden=true;
  // Bereich Räume
  $('thCard').hidden=!th.enabled;
  if(th.enabled){$('thRoomN').textContent=th.label||'–';$('thMsg').textContent=th.msg||'';$('thTemp').textContent=t1(th.temp)+' °C';if(!thTimer){$('thTarget').textContent=t1(th.target)+' °C';if(th.target!=null)$('thT').value=th.target}}
@@ -928,10 +936,10 @@ function renderHop(s){const h=s.hopper||{},box=$('hopHome');
  if(h.kg==null){box.hidden=true;return}box.hidden=false;HOP=h;
  const cap=+h.cap||13,kg=+h.kg,known=!!h.known;$('hopFull').textContent='Voll ('+t1(cap).replace(',0','')+' kg)';
  $('hopMark').style.left=Math.min(100,(+h.warn||0)/cap*100)+'%';
- if(!known){$('hopT').textContent='Füllstand unbekannt – nach dem Nachfüllen eintragen';$('hopFill').style.width='0%';box.classList.remove('low');return}
+ if(!known){$('hopT').textContent='Pellets: Füllstand unbekannt – antippen';$('hopFill').style.width='0%';box.classList.remove('low');return}
  const pct=Math.max(0,Math.min(100,kg/cap*100));$('hopFill').style.width=pct+'%';
  box.classList.toggle('low',kg<=+h.warn);
- $('hopT').textContent=t1(Math.max(0,kg)).replace(',0','')+' von '+t1(cap).replace(',0','')+' kg'+(h.hours!=null?' · reicht ca. '+(h.hours>=1?Math.round(h.hours)+' h':Math.round(h.hours*60)+' min'):'')}
+ $('hopT').textContent='Pellets '+t1(Math.max(0,kg)).replace(',0','')+' / '+t1(cap).replace(',0','')+' kg'+(h.hours!=null?' · ca. '+(h.hours>=1?Math.round(h.hours)+' h':Math.round(h.hours*60)+' min'):'')}
 function hopToggle(){const p=$('hopPanel');p.hidden=!p.hidden;if(!p.hidden)api('hopper').then(d=>{$('hopAug').textContent=d.auger||'–'}).catch(()=>{})}
 async function hopFill(kg,add){const cap=HOP?+HOP.cap:13;if(kg==null)kg=cap;
  if(!(kg>=0)){toast('Bitte eine Menge in kg eingeben',true);return}
