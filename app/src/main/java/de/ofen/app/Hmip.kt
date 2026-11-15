@@ -177,6 +177,10 @@ object Hmip {
     /** Räume (Heizgruppen) und alle Geräte mit Temperaturfühler */
     private fun parse(state: JSONObject): JSONArray {
         val out = JSONArray()
+        val heating = HashSet<String>()
+        state.optJSONObject("groups")?.let { groups ->
+            for (k in groups.keys()) if (groups.getJSONObject(k).optString("type") == "HEATING") heating += groups.getJSONObject(k).optString("id")
+        }
         state.optJSONObject("groups")?.let { groups ->
             val rooms = groups.keys().asSequence().map { groups.getJSONObject(it) }
                 .filter { it.optString("type") == "HEATING" && it.has("actualTemperature") && !it.isNull("actualTemperature") }
@@ -191,13 +195,20 @@ object Hmip {
             val list = devices.keys().asSequence().map { devices.getJSONObject(it) }.sortedBy { it.optString("label") }
             for (d in list) {
                 val chs = d.optJSONObject("functionalChannels") ?: continue
+                // Raum (Heizgruppe), zu dem das Gerät gehört
+                var room = ""
+                for (k in chs.keys()) {
+                    val gs = chs.getJSONObject(k).optJSONArray("groups") ?: continue
+                    for (i in 0 until gs.length()) if (gs.optString(i) in heating) { room = "g:" + gs.optString(i); break }
+                    if (room.isNotEmpty()) break
+                }
                 for (k in chs.keys()) {
                     val ch = chs.getJSONObject(k)
                     if (!ch.has("actualTemperature") || ch.isNull("actualTemperature")) continue
                     out.put(JSONObject()
                         .put("id", "d:" + d.optString("id")).put("label", d.optString("label")).put("kind", "Fühler")
                         .put("temp", num(ch, "actualTemperature")).put("hum", num(ch, "humidity"))
-                        .put("set", num(ch, "setPointTemperature")).put("window", ""))
+                        .put("set", num(ch, "setPointTemperature")).put("window", "").put("room", room))
                     break
                 }
             }
@@ -242,6 +253,12 @@ object Hmip {
         val a = sensors()
         for (i in 0 until a.length()) if (a.getJSONObject(i).optString("id") == id) return a.getJSONObject(i)
         return null
+    }
+
+    /** Heizgruppe („g:…“) zu einer Auswahl: Raum selbst oder der Raum, in dem der Fühler hängt */
+    fun roomOf(id: String): String? {
+        if (id.startsWith("g:")) return id
+        return sensor(id)?.optString("room")?.ifBlank { null }
     }
 
     /** für die Startseite: nur ausgewählte Räume */

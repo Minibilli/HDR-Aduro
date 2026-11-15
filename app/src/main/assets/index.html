@@ -664,7 +664,7 @@ async function setCtl(m){if((m==='hm')===ctlHm())return;
  try{if(m==='hm'){if(!HM||!HM.sensors)await hmLoad();
    const id=(HM&&HM.ctrl_id)||$('thRoom').value;
    if(!id){toast('Bitte zuerst unter Einstellungen → Homematic IP einen Raum wählen',true);tab('set');openPage('hm');return}
-   await api('config',{hm_ctrl:true,hm_ctrl_id:id,hm_ctrl_target:$('thT').value||(HM&&HM.ctrl_target)||21});
+   const r=await api('config',{hm_ctrl:true,hm_ctrl_id:id,hm_ctrl_target:$('thT').value||(HM&&HM.ctrl_target)||21});if(r&&r.valve_synced&&HM)HM.valve_id=r.valve_synced;
    $('thOn').checked=true;$('thBox').hidden=false;toast('Ofen regelt jetzt nach Homematic-Raum – Ofen-Ziel wird auf Homematic-Ziel + 2 °C gehoben')}
   else{await api('config',{hm_ctrl:false});$('thOn').checked=false;$('thBox').hidden=true;toast('Ofen regelt jetzt nach eigenem Fühler – alte Ofen-Zieltemperatur wiederhergestellt')}
   if(S&&S.thermo)S.thermo.enabled=m==='hm';if(S)render(S);if(HM)HM.ctrl=m==='hm'}
@@ -815,8 +815,9 @@ async function hmRefresh(){try{await api('hm/refresh',{});toast('Homematic aktua
 async function hmDisconnect(){if(!confirm('Verbindung zu Homematic IP trennen? Raumsteuerung und Heizkörper-Steuerung werden ausgeschaltet, geschlossene Heizkörper zurückgestellt.'))return;await api('hm/disconnect',{});toast('Homematic getrennt – Reiter „Räume“ ausgeblendet');hmLoad();refresh()}
 $('thOn').addEventListener('change',async()=>{const on=$('thOn').checked;$('thBox').hidden=!on;
  const body={hm_ctrl:on,hm_ctrl_id:$('thRoom').value,hm_ctrl_target:$('thT').value};
- try{await api('config',body);toast(on?'Raumsteuerung an: '+$('thRoom').selectedOptions[0]?.textContent+' → '+t1($('thT').value)+' °C':'Raumsteuerung aus');refresh()}catch(e){toast(e.message,true)}});
-$('thRoom').addEventListener('change',()=>api('config',{hm_ctrl_id:$('thRoom').value}).then(()=>{toast('Raum: '+$('thRoom').selectedOptions[0].textContent);refresh()}));
+ try{const r=await api('config',body);if(!(on&&vlSyncToast(r,'Raumsteuerung an')))toast(on?'Raumsteuerung an: '+$('thRoom').selectedOptions[0]?.textContent+' → '+t1($('thT').value)+' °C':'Raumsteuerung aus');refresh()}catch(e){toast(e.message,true)}});
+function vlSyncToast(r,pre){if(r&&r.valve_synced){$('vlRoom').value=r.valve_synced;if(HM)HM.valve_id=r.valve_synced;toast((pre?pre+' · ':'')+'Heizkörper-Raum: '+($('vlRoom').selectedOptions[0]?.textContent||''));return true}return false}
+$('thRoom').addEventListener('change',()=>api('config',{hm_ctrl_id:$('thRoom').value}).then(r=>{if(!vlSyncToast(r,'Raum: '+$('thRoom').selectedOptions[0].textContent))toast('Raum: '+$('thRoom').selectedOptions[0].textContent);refresh()}));
 $('vlOn').addEventListener('change',async()=>{const on=$('vlOn').checked;
  if(on&&!$('vlRoom').value){$('vlOn').checked=false;toast('Kein Raum gefunden – erst „Aktualisieren“ antippen',true);return}
  $('vlBox').hidden=!on;

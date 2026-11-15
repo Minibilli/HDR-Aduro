@@ -103,13 +103,20 @@ object Api {
                     c.put("hm_ctrl", b.optBoolean("hm_ctrl"))
                 }
                 if (b.has("hm_ctrl_id")) c.put("hm_ctrl_id", b.optString("hm_ctrl_id"))
+                // Raum der Raumsteuerung = Ofenraum: Heizkörper-Raum automatisch mitziehen
+                var valveSynced = ""
+                if ((b.has("hm_ctrl_id") || b.optBoolean("hm_ctrl")) && !b.has("hm_valve_id")) {
+                    Hmip.roomOf(c.optString("hm_ctrl_id"))?.let { g ->
+                        if (g != c.optString("hm_valve_id")) { c.put("hm_valve_id", g); valveSynced = g }
+                    }
+                }
                 if (b.has("hm_ctrl_target")) b.optString("hm_ctrl_target").toDoubleOrNull()?.let { c.put("hm_ctrl_target", it.coerceIn(10.0, 28.0)) }
                 if (b.has("hm_valve")) c.put("hm_valve", b.optBoolean("hm_valve"))
                 if (b.has("hm_valve_id")) c.put("hm_valve_id", b.optString("hm_valve_id"))
                 if (b.has("hm_valve_temp")) b.optString("hm_valve_temp").toDoubleOrNull()?.let { c.put("hm_valve_temp", it.coerceIn(5.0, 16.0)) }
                 if (b.has("wood_min")) b.optString("wood_min").toDoubleOrNull()?.let { c.put("wood_min", it.toInt().coerceIn(50, 400)) }
                 Stove.saveCfg(c)
-                return ok()
+                return ok(JSONObject().put("valve_synced", valveSynced))
             }
             "discover" -> return ok(Stove.discover())
             "setup" -> return ok(Stove.setup(b.optString("serial").trim(), b.optString("pin").trim()))
