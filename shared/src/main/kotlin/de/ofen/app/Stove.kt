@@ -210,7 +210,9 @@ object Stove {
         val sub = op["substate"] ?: ""
         val mode = op["operation_mode"] ?: ""
         val alarm = op["off_on_alarm"] ?: ""
-        s.put("state", st).put("state_text", STATE_TEXT[st] ?: "Zustand $st")
+        // gestoppt, aber Holz brennt (Pellets von der App oder im Handbetrieb aus) -> nicht „Per Taste gestoppt“ zeigen
+        val woodStop = st == "14" && (early.stopped || man.wood)
+        s.put("state", st).put("state_text", if (woodStop) "Holzbetrieb (Pellets aus)" else STATE_TEXT[st] ?: "Zustand $st")
         s.put("substate_text", SUBSTATE_TEXT[sub] ?: sub)
         s.put("room_temp", op["boiler_temp"] ?: JSONObject.NULL)
         s.put("smoke_temp", op["smoke_temp"] ?: JSONObject.NULL)
@@ -304,7 +306,14 @@ object Stove {
         lastState = st
         if (old == null || old == st || st.isBlank()) return
         if (!cfg().optBoolean("notify_state", true)) return
-        val name = STATE_TEXT[st] ?: "Zustand $st"
+        // „Per Taste gestoppt“ hilft nicht, wenn die App selbst gestoppt hat (Holzbetrieb, Ausschalten, Raumsteuerung)
+        if (st == "14" && (early.stopped || man.wood)) return   // dazu gibt es schon die Meldung „Pellets gestoppt“
+        val byApp = st == "14" && System.currentTimeMillis() - appStopAt < 3 * 60_000L
+        val name = when {
+            byApp && cfg().optBoolean("halted") -> "Ausgeschaltet (App)"
+            byApp -> "von der App gestoppt"
+            else -> STATE_TEXT[st] ?: "Zustand $st"
+        }
         val before = STATE_TEXT[old] ?: "Zustand $old"
         val extra = buildString {
             room?.toDoubleOrNull()?.let { append("Raum %.1f °C".format(it)) }

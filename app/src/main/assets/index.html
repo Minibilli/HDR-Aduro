@@ -224,7 +224,9 @@ body.noxp .xp{display:none!important}
 .hero .hop .hbar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;white-space:nowrap;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.45)}
 .hero .hop.low .hbar i{background:linear-gradient(90deg,#ff5d73,#d6164a)}
 #pelletCard{padding:14px 16px}#pelletCard h2{margin:0 0 8px}
-.h2r{display:flex;align-items:center;gap:8px}.h2r h2{flex:1}.apMini{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:12px;font-weight:800;color:var(--mute);cursor:pointer}
+.h2r{display:flex;align-items:center;justify-content:center;gap:10px}.h2r h2{flex:none;margin-bottom:8px}
+#ctlCol>h2{text-align:center}
+.card.dim{opacity:.45;filter:grayscale(1);pointer-events:none}.apMini{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:12px;font-weight:800;color:var(--mute);cursor:pointer}
 .sw.sm{position:relative;width:40px;height:24px;flex:0 0 40px;display:inline-block}.sw.sm i::after{width:18px;height:18px}.sw.sm input:checked+i::after{transform:translateX(16px)}
 .apT{font-size:12.5px;color:var(--mute);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.apT[hidden]{display:none}
 .duo.two .seg button{padding:7px 6px;font-size:14px}.seg button{padding:9px 6px}
@@ -240,6 +242,11 @@ body.appoff .fnPill{display:none}
 body.hasbg .fnPill,body.hasbg .topbar .net{background:color-mix(in srgb,var(--card) var(--cardA,66%),transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .heroR{position:absolute;top:14px;right:14px;display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:1}
 .heroR .pbtn{display:flex;align-items:center;gap:6px;padding:9px 14px;border-radius:999px;font-size:14px;font-weight:800;background:rgba(255,255,255,.94);color:#0f9f76;box-shadow:0 3px 10px rgba(0,0,0,.15);white-space:nowrap}
+.heroR .pbtn{width:132px;justify-content:center}
+.heroR .pbtn.offb{color:#e11d48}
+/* aktiver Zustand: Schaltfläche invertiert */
+.heroR .pbtn.act{background:#0f9f76;color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.9),0 3px 10px rgba(0,0,0,.15)}
+.heroR .pbtn.offb.act{background:#e11d48}
 .heroR .pbtn svg{width:18px;height:18px}.heroR .pbtn.stop{color:#e11d48}.heroR .pbtn.off{color:#475569}.heroR .pbtn[hidden]{display:none}.heroR .pbtn:disabled{opacity:.5}
 .heroR .fanbadge{position:relative;top:auto;right:auto;width:64px;height:64px}.heroR .fanbadge .in svg{width:20px;height:20px}.heroR .fanbadge .in b{font-size:15px}
 .hero .sub,.hero .big{padding-right:118px}.hero:has(#fanBadge:not([hidden])) .blabel{padding-right:80px}
@@ -296,8 +303,8 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
   <div class="hero" id="hero" data-mode="err">
     <span class="chip"><i></i><span id="state">Verbinde …</span></span>
     <div class="heroR">
-      <button class="pbtn off" id="haltBtn" hidden onclick="haltNow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/></svg><span>Ofen aus</span></button>
       <button class="pbtn" id="powerBtn" onclick="powerToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/></svg><span id="powerT">Ofen an</span></button>
+      <button class="pbtn offb" id="haltBtn" onclick="haltNow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/></svg><span>Ofen aus</span></button>
     <div class="fanbadge" id="fanBadge" hidden onclick="tab('fan')" title="Gebläse läuft von Hand">
       <svg class="ring" viewBox="0 0 100 100"><defs><linearGradient id="fanGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22c7e8"/><stop offset="1" stop-color="#0fb5a6"/></linearGradient></defs>
         <circle class="rb" cx="50" cy="50" r="45"/><circle class="rf" id="fanArc" cx="50" cy="50" r="45" stroke-dasharray="282.7" stroke-dashoffset="0"/></svg>
@@ -675,7 +682,7 @@ setInterval(()=>{if(lastOk&&Date.now()-lastOk>35000)setNet('bad','Keine Verbindu
 function vpnLink(){return '#'}
 document.addEventListener('click',e=>{if(e.target.closest('#vpnBtn,#vpnHomeBtn')){e.preventDefault();if(!Ofen.openApp(vpnApp))toast('VPN-App ist nicht installiert',true)}});
 async function offline(e){
- $('hero').dataset.mode='err';$('bigV').textContent='–';$('m1').textContent='–';$('m2').textContent='–';$('gauge').hidden=true;$('powerBtn').disabled=true;
+ $('hero').dataset.mode='err';$('bigV').textContent='–';$('m1').textContent='–';$('m2').textContent='–';$('gauge').hidden=true;$('powerBtn').disabled=true;$('haltBtn').disabled=true;
  $('state').textContent='Keine Verbindung';
  try{ctlRenderBar(await api('control'))}catch(x){}
  let n={route:'none'};try{n=await api('net')}catch(x){}
@@ -757,9 +764,11 @@ function render(s){
   $('m1').textContent=t1(th.target)+' °C';$('m1l').textContent='Ziel · Homematic';$('m2').textContent=num(s.smoke_temp)+' °C';$('m2l').textContent='Rauchgas';$('gauge').hidden=true
  }else{$('bigV').textContent=num(s.room_temp,1);$('bigL').textContent='Raumtemperatur';
   $('m1').textContent=num(s.target_temp)+' °C';$('m1l').textContent='Ziel';$('m2').textContent=num(s.smoke_temp)+' °C';$('m2l').textContent='Rauchgas';$('gauge').hidden=true}
- const pb=$('powerBtn');pb.disabled=false;const stopMode=!hal&&running;pb.classList.toggle('stop',stopMode);$('powerT').textContent=stopMode?'Ofen aus':'Ofen an';
- $('haltBtn').hidden=hal||running;
- $('pelletCard').hidden=w;
+ /* Ofen an / Ofen aus: beide gleich groß, der aktuelle Zustand ist invertiert */
+ const pb=$('powerBtn'),hb=$('haltBtn');pb.disabled=hb.disabled=false;$('powerT').textContent='Ofen an';
+ pb.classList.toggle('act',!hal&&running);hb.classList.toggle('act',hal);
+ /* Holzbetrieb: Heizstufe/Ziel gelten nicht – ausgegraut statt ausgeblendet */
+ $('pelletCard').hidden=false;$('pelletCard').classList.toggle('dim',w);
  placeFan();
  const lv={'10':1,'50':2,'100':3}[String(s.fixed_power)];document.querySelectorAll('#lv button').forEach(b=>b.classList.toggle('sel',+b.dataset.l===lv));
  apRender(s);
@@ -786,9 +795,9 @@ async function run(fn,ok){busy=true;try{await fn();toast(ok)}catch(e){toast(e.me
 
 /* Bedienung */
 function powerToggle(){const running=S&&(RUN.includes(S.state)||S.wood_mode);
- if(S&&!S.halted&&running)return haltNow();
+ if(S&&!S.halted&&running){toast('Ofen läuft bereits');return}
  run(()=>api('start',{}),S&&S.halted?'Eingeschaltet – Ofen startet, Automatiken wieder aktiv':'Startbefehl gesendet')}
-function haltNow(){if(!confirm('Ofen ausschalten?\n\nDer Ofen stoppt und alle Automatiken der App pausieren (Raumsteuerung, Pellet-Neustart, Heizkörper-Steuerung), bis du wieder „Starten“ drückst.'))return;
+function haltNow(){if(S&&S.halted){toast('Ofen ist bereits ausgeschaltet');return}if(!confirm('Ofen ausschalten?\n\nDer Ofen stoppt und alle Automatiken der App pausieren (Raumsteuerung, Pellet-Neustart, Heizkörper-Steuerung), bis du wieder „Starten“ drückst.'))return;
  if(S){S.halted=true;render(S)}run(()=>api('stop',{}),'Ausgeschaltet – Automatiken pausiert')}
 function power(l){run(async()=>{const r=await api('power',{level:l});if(r&&r.auto_off){$('apOn').checked=false;CFG.auto_power=false;setTimeout(()=>toast('Heizstufe '+['','niedrig','mittel','hoch'][l]+' – Automatik aus'),50)}return r},'Heizstufe '+['','niedrig','mittel','hoch'][l])}
 const AP_DEF='';
