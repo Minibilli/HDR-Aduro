@@ -404,11 +404,13 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
     <p class="mute" style="margin-bottom:0;font-size:13px"><b>Wechselnde IP-Adresse:</b> Antwortet der Ofen nicht mehr, sucht die App ihn im Heim-WLAN anhand der Seriennummer und übernimmt die neue IP von selbst<span id="ipChg"></span>. Unterwegs über VPN geht das nicht – deshalb am besten im Router eine feste IP vergeben (FRITZ!Box: Heimnetz → Netzwerk → Ofen bearbeiten → „Diesem Netzwerkgerät immer die gleiche IPv4-Adresse zuweisen“).</p>
   </div>
   <div class="card" data-pg="link">
+    <div id="lkCtlBox">
     <h2>Steuerung</h2>
     <p class="mute" style="margin-top:0">Anzeigen und Bedienen geht auf allen Geräten. Die <b>Automatiken</b> (Raumsteuerung, automatische Heizstufe, Pellets früher stoppen und Neustart, Heizkörper) laufen aber immer nur auf <b>einem</b> Gerät – dem mit der Steuerung. Bei der Übergabe wandern Einstellungen und laufender Zustand mit (z.&nbsp;B. „Heizkörper zu“, „ausgeschaltet“).</p>
     <div class="okbox" id="lkCtl" style="margin-top:4px">–</div>
     <div class="row" style="margin-top:12px"><button class="fire" id="lkTake" onclick="ctlTake()">Übernehmen</button><button id="lkRel" onclick="ctlRelease()">Freigeben</button></div>
     <button id="lkForce" style="width:100%;margin-top:10px" hidden onclick="ctlForce()">Notfall-Übernahme (Raspi offline)</button>
+    </div>
     <div id="lkRaspi" hidden>
       <h2 style="margin-top:22px">Gerät koppeln</h2>
       <p class="mute" style="margin-top:0">In der HDR-Aduro-App unter <b>Einstellungen → Raspi &amp; Handys</b> die Adresse <b id="lkUrl">–</b> und diesen Code eintragen. Im Browser die Adresse öffnen und den Code eingeben.</p>
@@ -421,8 +423,8 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
       <label>Name dieses Raspi</label><div class="row"><input id="lkName" placeholder="Raspi"><button style="flex:0 0 110px" onclick="lkSaveName()">Speichern</button></div>
     </div>
     <div id="lkPhone" hidden>
-      <h2 style="margin-top:22px">Raspi</h2>
       <div id="lkPairBox">
+        <p class="mute" style="margin-top:0">Optional: Hast du das Wandgerät <b>HDR Aduro Home Raspi</b> (Raspberry Pi mit Touchscreen), kannst du die App hier damit koppeln. Ohne Raspi funktioniert die App ganz normal allein.</p>
         <label>Adresse des Raspi</label><input id="lkAddr" placeholder="192.168.1.20 oder raspi.local" autocapitalize="off">
         <label>Code vom Touchscreen</label><input id="lkPin" inputmode="numeric" maxlength="6" placeholder="6 Ziffern">
         <button class="fire" style="width:100%;margin-top:14px" onclick="lkPair()">Koppeln</button>
@@ -698,7 +700,7 @@ function ctlText(c){if(!c||!c.linked)return null;
  if(!c.reachable)return ['Raspi nicht erreichbar','Nur Anzeige – Automatiken laufen auf dem Raspi, falls er noch läuft','Notfall','force','bad'];
  if(c.kind==='none')return ['Steuerung freigegeben','Keine Automatik aktiv','Übernehmen','take','warn'];
  return ['Steuerung: '+(c.kind==='phone'?'Handy'+nm:'Raspi'+nm),'Dieses Handy zeigt den Raspi an','Übernehmen','take','away']}
-function ctlRenderBar(c){if(c)CTL=c;const t=ctlText(CTL),b=$('ctlBar');if(!t){b.hidden=true;return}b.hidden=false;
+function ctlRenderBar(c){if(c)CTL=c;if(!WEB&&CTL&&!CTL.linked){$('ctlBar').hidden=true;return}const t=ctlText(CTL),b=$('ctlBar');if(!t){b.hidden=true;return}b.hidden=false;
  $('ctlT').textContent=t[0];$('ctlS').textContent=t[1];$('ctlBtn').textContent=t[2];$('ctlBtn').dataset.a=t[3];b.className='ctlbar'+(t[4]?' '+t[4]:'')}
 function ctlAction(){const a=$('ctlBtn').dataset.a;if(a==='take')ctlTake();else if(a==='release')ctlRelease();else if(a==='force')ctlForce()}
 function ctlAfter(){setTimeout(refresh,400);if(setPage==='link')lkLoad()}
@@ -718,7 +720,7 @@ let LK=null,lkT=null;
 async function lkLoad(){try{LK=await api('link');ctlRenderBar(await api('control'))}catch(e){toast(e.message,true);return}
  const c=CTL||{},r=LK.role==='raspi',t=ctlText(c);
  $('lkCtl').textContent=t?t[0]+' – '+t[1]:'Kein Raspi gekoppelt – dieses Handy steuert allein.';
- $('lkRaspi').hidden=!r;$('lkPhone').hidden=r;
+ $('lkRaspi').hidden=!r;$('lkPhone').hidden=r;$('lkCtlBox').hidden=!r&&!LK.linked;
  $('lkTake').hidden=!c.linked||(c.holder&&!(r&&c.guard_s>0));$('lkRel').hidden=!c.linked||!c.holder;$('lkForce').hidden=r||!c.linked||c.holder||!!c.reachable;
  if(r){$('lkCode').textContent=LK.code;$('lkCodeS').textContent='noch '+Math.max(1,Math.ceil(LK.code_s/60))+' min gültig · nur einmal verwendbar';
   const ad=(LK.addrs||[]).filter(a=>!/^169\.254/.test(a));$('lkUrl').textContent=ad.length?ad.join(' oder '):'(IP des Raspi)';
@@ -976,11 +978,14 @@ function menuSub(id){try{
  if(id==='outs'){const n=Object.keys(man.names||{}).length;return n?n+' benannt'+(man.fresh_air_bit!=null?' · Frischluftgebläse':''):'noch keine benannt'}
  if(id==='bg'){const b=JSON.parse(Ofen.bgInfo());return (b.notif_ok?(CFG.notify_state!==false?'Benachrichtigungen + Zustände':'Benachrichtigungen an'):'Benachrichtigungen aus')+' · Akku-Optimierung '+(b.battery_ok?'aus':'an')}
  if(id==='expert')return 'Jeden Wert einzeln lesen und ändern';
- if(id==='link'){const t=ctlText(CTL);return t?t[0]:(CTL&&CTL.role==='raspi'?'':'kein Raspi gekoppelt')}
+ if(id==='link'){if(!linkedUI())return 'optional – Wandgerät mit Touchscreen';const t=ctlText(CTL);return t?t[0]:''}
  if(id==='look')return BGPH?'eigenes Hintergrundbild':'kein Hintergrundbild';
  if(id==='xpm')return XP?'an – sicherheitsrelevante Funktionen freigeschaltet':'aus';
 }catch(e){}return ''}
-function buildMenu(){$('setMenu').innerHTML=PAGES.filter(p=>(XP||!p.xp)&&!(WEB&&p.app)).map(p=>`<div class="mi" data-p="${p.id}"><div class="mic" style="background:${p.c}">${p.i}</div><div class="mt"><b>${p.t}</b><span>${esc(menuSub(p.id))}</span></div><div class="chev">›</div></div>`).join('');
+function linkedUI(){return WEB||!!CFG.linked}
+function pageList(){const L=PAGES.find(p=>p.id==='link');L.t=linkedUI()?'Raspi & Handys':'Raspi koppeln';
+ const ps=PAGES.filter(p=>(XP||!p.xp)&&!(WEB&&p.app)&&p.id!=='link');ps.splice(linkedUI()?1:ps.length,0,L);return ps}
+function buildMenu(){$('setMenu').innerHTML=pageList().map(p=>`<div class="mi" data-p="${p.id}"><div class="mic" style="background:${p.c}">${p.i}</div><div class="mt"><b>${p.t}</b><span>${esc(menuSub(p.id))}</span></div><div class="chev">›</div></div>`).join('');
  $('setMenu').querySelectorAll('.mi').forEach(m=>m.onclick=()=>openPage(m.dataset.p))}
 function openPage(id,dir){setPage=id;const P=PAGES.find(p=>p.id===id);
  $('setTitle').textContent=P?P.t:'Einstellungen';$('setMenu').hidden=!!id;

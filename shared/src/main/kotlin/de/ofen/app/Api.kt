@@ -44,7 +44,7 @@ object Api {
                 .put("bg_dim", c.optInt("bg_dim", 35)).put("card_alpha", c.optInt("card_alpha", 66))
                 .put("ip_changed_at", c.optLong("ip_changed_at")).put("ip_old", c.optString("ip_old"))
                 .put("expert", c.optBoolean("expert")).put("expert_ver", Stove.EXPERT_TEXT_VERSION)
-                .put("hm", Hmip.connected()))
+                .put("hm", Hmip.connected()).put("linked", Stove.platform.kind == "raspi" || Link.linked()))
         }
         "status" -> ok(Stove.readStatus().put("control", Control.info()))
         "control" -> ok(Control.info())

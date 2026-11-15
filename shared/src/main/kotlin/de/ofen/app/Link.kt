@@ -121,7 +121,7 @@ object Link {
             }
             if (d != null && path == "config" && body == null) {
                 val c = Stove.cfg()
-                d.put("app_on", Stove.appRunning()).put("vpn_app", c.optString("vpn_app", "com.zaneschepke.wireguardautotunnel"))
+                d.put("linked", true).put("app_on", Stove.appRunning()).put("vpn_app", c.optString("vpn_app", "com.zaneschepke.wireguardautotunnel"))
                     .put("notify_state", c.optBoolean("notify_state", true))
                     .put("bg_dim", c.optInt("bg_dim", 35)).put("card_alpha", c.optInt("card_alpha", 66))
             }
