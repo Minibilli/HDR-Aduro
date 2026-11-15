@@ -46,6 +46,9 @@ h2{font-size:12.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--mu
 .blabel{font-size:13px;font-weight:600;opacity:.75;margin-top:2px}
 .meta{display:flex;gap:8px;margin-top:10px}
 .meta div{flex:1;border-radius:12px;padding:6px 10px;background:color-mix(in srgb,currentColor 9%,transparent)}
+.meta div.tap{cursor:pointer;position:relative}.meta div.tap::after{content:'›';position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:20px;opacity:.45}
+.meta div.tap:active{filter:brightness(.92)}
+.card.flash{animation:flash 1.6s ease}@keyframes flash{0%,60%{box-shadow:0 0 0 3px var(--fire)}100%{box-shadow:var(--shadow)}}
 .meta b{display:block;font-size:16px;font-variant-numeric:tabular-nums}.meta small{font-size:12px;opacity:.75}
 .gauge{position:relative;height:10px;border-radius:99px;margin-top:16px;background:color-mix(in srgb,currentColor 16%,transparent);overflow:visible}
 .gauge i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:currentColor;transition:width .6s}
@@ -306,7 +309,7 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
     <div class="big"><b id="bigV">–</b><span>°C</span></div>
     <div class="blabel" id="bigL">Raumtemperatur</div>
     <div class="gauge" id="gauge" hidden><i id="gFill"></i><b></b></div>
-    <div class="meta"><div><b id="m1">–</b><small id="m1l">Ziel</small></div><div><b id="m2">–</b><small id="m2l">Rauchgas</small></div>
+    <div class="meta"><div id="m1b" onclick="metaTap(1)"><b id="m1">–</b><small id="m1l">Ziel</small></div><div id="m2b" onclick="metaTap(2)"><b id="m2">–</b><small id="m2l">Rauchgas</small></div><input type="range" id="tgtIn" min="5" max="35" step="1" hidden>
 </div>
     <div class="hop" id="hopHome" hidden onclick="hopToggle()"><div class="hbar"><i id="hopFill"></i><em id="hopMark"></em><span id="hopT">–</span></div></div>
     <div class="vpnbox" id="vpnBox" hidden><p id="vpnMsg"></p><a class="btn fire" id="vpnBtn" href="#">VPN öffnen</a></div>
@@ -763,7 +766,19 @@ function render(s){
  ctlRender(s);
  renderRooms(s);renderParts(s);renderHop(s);
  $('upd').textContent='Aktualisiert '+new Date().toLocaleTimeString('de-DE');
+ $('m1b').classList.toggle('tap',!!metaAct(1));$('m2b').classList.toggle('tap',!!metaAct(2));
 }
+/* Kacheln im Hero antippen: passende Einstellung öffnen */
+function metaAct(n){const l=$(n===1?'m1l':'m2l').textContent;
+ if(l==='Warnung unter')return 'wood';
+ if(l==='Ziel · Homematic')return 'rooms';
+ if(l==='Raum'||l==='Ziel')return ctlHm()?'rooms':'target';
+ return null}
+function metaTap(n){const a=metaAct(n);if(!a)return;
+ if(a==='wood'){tab('set');openPage('pellet');const c=$('woodMin').closest('.card');setTimeout(()=>{c.scrollIntoView({behavior:'smooth',block:'center'});c.classList.remove('flash');void c.offsetWidth;c.classList.add('flash')},350)}
+ else if(a==='rooms'){tab('rooms');const c=$('thCard');c.classList.remove('flash');void c.offsetWidth;c.classList.add('flash')}
+ else if(a==='target'){const el=$('tgtIn');el.value=target??Math.round(+(S&&S.target_temp)||20);numFor(el,'Raum-Zieltemperatur (Ofen)')}}
+$('tgtIn').addEventListener('change',()=>{const t=+$('tgtIn').value;target=t;$('tv').textContent=t+' °C';run(()=>api('target',{temp:t}),'Zieltemperatur '+t+' °C')});
 async function refresh(){if(!APPON)return;if(busy)return schedule(2000);try{const s=await api('status');lastOk=Date.now();online=true;$('vpnBox').hidden=true;
  const vh=s.route==='vpn'&&s.home_wifi;setNet('ok',(vh?'VPN an!':s.route==='vpn'?'VPN':'WLAN'));$('vpnHome').hidden=!vh;$('vpnHomeBtn').href=vpnLink();wood(s);render(s);manVisible();schedule(10000)}
  catch(e){if(/Funktionen sind aus/.test(e.message||'')){setAppOn(false);return}online=false;manVisible();await offline(e);schedule(4000)}}
