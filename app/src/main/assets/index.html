@@ -150,6 +150,13 @@ input[type=range].lp{outline:3px solid color-mix(in srgb,var(--fire) 35%,transpa
 .hmrow .nm{flex:1;min-width:0}.hmrow .nm b{display:block;font-size:15px}.hmrow .nm span{font-size:12.5px;color:var(--mute)}
 .gear{flex:0 0 40px;width:40px;height:40px;padding:0;border-radius:50%;display:grid;place-items:center;background:var(--card);box-shadow:var(--shadow);color:var(--mute)}
 .gear svg{width:22px;height:22px;transition:transform .35s}.gear.on{color:var(--fire)}.gear.on svg{transform:rotate(60deg)}
+.qbtn{margin-left:auto;width:36px;height:36px;flex:0 0 36px;border-radius:50%;padding:0;font-size:18px;font-weight:800;display:grid;place-items:center}
+.help details{border-top:1px solid var(--line);padding:12px 0}.help details:first-of-type{border-top:0}
+.help details>div{padding-top:6px;font-size:15px;line-height:1.5}.help ul,.help ol{padding-left:20px;margin:6px 0}.help li{margin:4px 0}.help p{margin:6px 0}
+.help details.flash{animation:hflash 1.6s ease}@keyframes hflash{0%,60%{background:color-mix(in srgb,var(--fire) 14%,transparent)}100%{background:transparent}}
+.web .help .apponly{display:none}
+.welcome{position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}.welcome[hidden]{display:none}
+.welcome .card{width:100%;max-width:520px;margin:0;border-radius:24px 24px 0 0;max-height:88vh;overflow:auto;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
 .settitle{display:flex;align-items:center;gap:6px;font-size:22px;font-weight:800;margin:0 0 14px;cursor:pointer}.settitle svg{width:24px;height:24px;color:var(--mute)}
 @keyframes inL{from{transform:translateX(40px);opacity:0}}@keyframes inR{from{transform:translateX(-40px);opacity:0}}
 section.inL{animation:inL .22s ease-out}section.inR{animation:inR .22s ease-out}
@@ -394,7 +401,7 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
 
 <!-- ============ Tab: Einstellungen ============ -->
 <section id="t-set" hidden>
-  <div class="settitle" onclick="setBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span id="setTitle">Einstellungen</span></div>
+  <div class="settitle" onclick="setBack()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span id="setTitle">Einstellungen</span><button class="qbtn" id="setHelp" hidden onclick="event.stopPropagation();helpFor(setPage)" aria-label="Hilfe">?</button></div>
   <div class="card menu" id="setMenu"></div>
   <div class="card" data-pg="conn">
     <h2>Ofen</h2>
@@ -442,6 +449,67 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
       </div>
       <div id="lkPaired" hidden><div class="okbox" id="lkPairT"></div><button style="width:100%;margin-top:10px" onclick="lkUnpair()">Entkoppeln</button></div>
     </div>
+  </div>
+  <div class="card help" data-pg="help">
+    <p class="mute" style="margin-top:0">Tippe auf ein Thema. In jeder Einstellungsseite führt das <b>?</b> oben rechts direkt zum passenden Abschnitt.</p>
+    <details id="h-safe"><summary>⚠️ Sicherheit – bitte zuerst lesen</summary><div>
+      <p>Die App kann den Ofen <b>selbsttätig und aus der Ferne starten</b> (Raumsteuerung, automatischer Pelletstart, per VPN von unterwegs). Ein Ofen ist ein Feuer.</p>
+      <ul><li>Starte den Ofen nur, wenn Brennraum, Tür, Aschekasten und Umgebung in Ordnung sind und nichts Brennbares in der Nähe liegt.</li>
+      <li>Fernstart und Automatik nur nutzen, wenn das nach den Vorgaben des Herstellers und deines Schornsteinfegers zulässig ist.</li>
+      <li>Die App ersetzt <b>keine</b> Aufsicht, keinen Rauchmelder und keinen CO-Melder.</li>
+      <li>Verbindungsabbrüche, falsche Messwerte oder Fehler in der App können dazu führen, dass der Ofen anders reagiert als erwartet.</li></ul>
+      <p><b>HDR Aduro ist ein privates, inoffizielles Projekt</b> – kein Produkt von Aduro, NBE oder eQ-3. Getestet nur mit einem Aduro H1. Nutzung vollständig auf eigene Gefahr, ohne Gewähr und ohne Support.</p></div></details>
+    <details id="h-start"><summary>Erste Schritte: Ofen verbinden</summary><div>
+      <ol><li>Handy ins <b>Heim-WLAN</b>, in dem auch der Ofen ist.</li>
+      <li><b>Einstellungen → Ofen &amp; Verbindung → Mit einem Foto einrichten</b>: den NBE-Aufkleber (meist hinten unten am Ofen, „Serie No.“ und „Password“) fotografieren. Die App liest beides und sucht den Ofen selbst.</li>
+      <li>Klappt das Foto nicht: <b>Ofen im WLAN suchen</b> und Seriennummer und PIN (= „Password“ vom Aufkleber) unter <b>Von Hand eingeben</b> eintragen.</li>
+      <li>Auf der Startseite <b>Funktionen</b> einschalten. Erst dann überwacht die App den Ofen.</li></ol>
+      <p class="mute">Tipp: Im Router dem Ofen eine feste IP-Adresse geben. Ändert sie sich trotzdem, findet die App den Ofen im Heim-WLAN wieder.</p></div></details>
+    <details id="h-home"><summary>Startseite</summary><div>
+      <ul><li><b>Farbe der Karte</b>: orange-rot = Pellets brennen, gelb = Holzbetrieb, grau gestreift = ausgeschaltet.</li>
+      <li><b>Ofen an / Ofen aus</b>: der gefüllte Knopf zeigt den aktuellen Zustand.</li>
+      <li><b>Kacheln antippen</b> (mit Pfeil ›): „Ziel“ bzw. „Raum“ öffnet die Zieltemperatur, „Warnung unter“ die Holz-Warnung.</li>
+      <li><b>Pellets</b>-Balken antippen: nach dem Nachfüllen „Voll“ oder die Menge eintragen. Der Ofen zählt den Verbrauch danach selbst.</li>
+      <li><b>Heizstufe</b> Niedrig / Mittel / Hoch und darunter die <b>Raum-Zieltemperatur</b> des Ofens mit – und +. Im Holzbetrieb ist dieses Feld ausgegraut, weil dann das Holz heizt.</li>
+      <li><b>Auto</b> neben „Heizstufe“: die App wählt die Stufe selbst – ab 1,5 °C unter Ziel „Hoch“, ab 0,5 °C „Mittel“, sonst „Niedrig“. Sie wechselt höchstens alle 10 Minuten.</li>
+      <li>Unten in der Leiste: <b>Bauteile</b> (Gebläse, Schnecke …) und mit Homematic die <b>Räume</b>.</li></ul></div></details>
+    <details id="h-off"><summary>„Ofen aus“ und „Ausgeschaltet“</summary><div>
+      <p><b>Ofen aus</b> stoppt den Ofen und schaltet ihn auf <b>„Ausgeschaltet“</b>: Alle Automatiken der App sind dann pausiert – nichts startet von selbst, auch nicht Raumsteuerung oder Pelletstart.</p>
+      <p>Erst <b>Ofen an</b> hebt das wieder auf. Wird der Ofen direkt am Ofen gestoppt, erkennt die App das und schaltet ebenfalls auf „Ausgeschaltet“.</p></div></details>
+    <details id="h-pellet"><summary>Pellets &amp; Holz</summary><div>
+      <ul><li><b>Warnung im Holzbetrieb</b>: fällt das Rauchgas unter den Wert, kommt „Holz nachlegen?“ – in der App und als Benachrichtigung.</li>
+      <li><b>Pellet-Füllstand</b>: Behältergröße und Warnschwelle einstellen; auf Wunsch Benachrichtigung, wenn es knapp wird.</li>
+      <li><b>Holzverbrennung Temperatur</b> (Experte): ab diesem Rauchgaswert stoppt der Ofen selbst die Pellets.</li>
+      <li><b>Pellets früher stoppen</b> (Experte): die App stoppt die Pellets schon vorher, wenn das Rauchgas 30 s über dem Wert liegt – sinnvoll, wenn du Holz nachgelegt hast.</li>
+      <li><b>Automatischer Pelletstart</b> (Experte): ist das Holz abgebrannt, startet die App die Pellets wieder.</li></ul></div></details>
+    <details id="h-hm"><summary>Homematic IP (optional)</summary><div>
+      <ol><li><b>Einstellungen → Homematic IP</b>: Access-Point-ID (SGTIN, Aufkleber auf dem Access Point) eintragen oder scannen. PIN nur, wenn du in der Homematic-App eine festgelegt hast.</li>
+      <li><b>Verbinden</b> tippen und innerhalb von 3 Minuten die <b>blaue Taste am Access Point</b> drücken.</li></ol>
+      <ul><li><b>Räume</b>: Temperaturen deiner Räume, auswählbar welche angezeigt werden.</li>
+      <li><b>Ofen nach Raum steuern</b> (Experte): startet den Ofen 0,5 °C unter dem Ziel, stoppt ihn 0,5 °C darüber; mindestens 60 min Laufzeit und 30 min Pause. <b>Startet den Ofen selbsttätig.</b></li>
+      <li><b>Heizkörper im Ofenraum schließen</b>: heizt der Ofen, gehen die Ventile in seinem Raum zu; danach kommt der Wochenplan zurück. Ist der Ofen 30 min nicht erreichbar, öffnet die App sie sicherheitshalber wieder.</li></ul></div></details>
+    <details id="h-xpm"><summary>Expertenmodus</summary><div>
+      <p>Schaltet Funktionen frei, die direkt in die Ofensteuerung eingreifen: Gebläse und Bauteile von Hand schalten, alle Ofen-Werte ändern, Holzverbrennung Temperatur, Pellets früher stoppen, automatischer Pelletstart und Raumsteuerung. Freischalten nur nach Bestätigung eines Sicherheitshinweises. Falsche Werte können den Ofen beschädigen oder unsicher machen.</p></div></details>
+    <details id="h-bg" class="apponly"><summary>Hintergrund &amp; Benachrichtigungen</summary><div>
+      <p>Damit Warnungen auch bei geschlossener App kommen, unter <b>Einstellungen → Hintergrund &amp; Benachrichtigungen</b>:</p>
+      <ul><li><b>Akku-Optimierung ausschalten</b> – sonst beendet Android die Überwachung.</li>
+      <li><b>Benachrichtigungen erlauben</b>.</li>
+      <li>Android zeigt dann dauerhaft „Ofen wird überwacht“. Das ist richtig so.</li></ul>
+      <p class="mute">Bei Samsung, Xiaomi, Huawei u. a. zusätzlich in den Android-Einstellungen der App „Im Hintergrund erlauben“ / „Nicht einschränken“ wählen.</p></div></details>
+    <details id="h-vpn" class="apponly"><summary>Von unterwegs (VPN)</summary><div>
+      <p>Der Ofen ist nur im Heimnetz erreichbar. Von unterwegs braucht das Handy eine <b>WireGuard-VPN-Verbindung</b> nach Hause, z. B. über die FRITZ!Box. Die VPN-App wählst du unter <b>Ofen &amp; Verbindung</b>; ist der Ofen nicht erreichbar, bietet die App an, sie zu öffnen.</p></div></details>
+    <details id="h-link"><summary>Raspi-Wandgerät (optional)</summary><div>
+      <p>Mit dem Wandgerät <b>HDR Aduro Home Raspi</b> (Raspberry Pi mit Touchscreen) läuft die Überwachung rund um die Uhr. Ohne Raspi funktioniert die App ganz normal allein.</p>
+      <ul><li><b>Koppeln</b>: Einstellungen → Raspi koppeln, Adresse des Raspi und den Code vom Touchscreen eintragen.</li>
+      <li><b>Steuerung</b>: Bedienen geht überall, die Automatiken laufen aber nur auf einem Gerät. Mit <b>Übernehmen</b> und <b>Freigeben</b> wechselst du; Einstellungen und Zustand wandern mit.</li>
+      <li>Meldet sich das steuernde Handy 3 Minuten nicht, übernimmt wieder der Raspi. Ist der Raspi kaputt, gibt es am Handy die <b>Notfall-Übernahme</b>.</li></ul></div></details>
+    <details id="h-trouble"><summary>Wenn etwas nicht klappt</summary><div>
+      <ul><li><b>Ofen antwortet nicht</b>: Handy im Heim-WLAN? Ofen eingeschaltet und im WLAN? Unter Ofen &amp; Verbindung „Ofen im WLAN suchen“.</li>
+      <li><b>Falsches Passwort</b>: PIN = „Password“ vom NBE-Aufkleber, nicht das WLAN-Passwort.</li>
+      <li><b>Keine Warnungen bei geschlossener App</b>: Akku-Optimierung und Benachrichtigungen prüfen (siehe Hintergrund &amp; Benachrichtigungen).</li>
+      <li><b>Homematic verbindet nicht</b>: blaue Taste am Access Point innerhalb von 3 Minuten drücken; Access-Point-ID genau prüfen.</li>
+      <li><b>Installation blockiert</b>: „Dieser Quelle vertrauen“ erlauben; bei Play Protect „Weitere Details → Trotzdem installieren“.</li>
+      <li><b>Update</b>: neue Version einfach über die alte installieren – die Einstellungen bleiben erhalten.</li></ul></div></details>
   </div>
   <div class="card" data-pg="look">
     <h2>Hintergrundbild</h2>
@@ -592,6 +660,14 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
   </div>
 </div>
 
+<div class="welcome" id="welcome" hidden><div class="card">
+  <h2 style="margin-top:0">Willkommen bei HDR Aduro</h2>
+  <p>Inoffizielle App für Aduro-Hybridöfen mit NBE-Steuerung – ohne Cloud, direkt im Heimnetz.</p>
+  <p><b>⚠️ Bitte beachten:</b> Die App kann den Ofen auch selbsttätig und aus der Ferne starten. Sie ersetzt keine Aufsicht, keinen Rauch- oder CO-Melder. Kein Produkt von Aduro; getestet nur mit einem Aduro H1. Nutzung auf eigene Gefahr.</p>
+  <p class="mute">Die Anleitung findest du jederzeit unter Einstellungen → Anleitung.</p>
+  <button class="fire" style="width:100%" onclick="welcomeDone(true)">Anleitung öffnen</button>
+  <button style="width:100%;margin-top:10px" onclick="welcomeDone(false)">Verstanden</button>
+</div></div>
 <div class="login" id="login" hidden><div class="card">
   <h2>HDR Aduro Home</h2>
   <p style="margin-top:0">Dieses Gerät ist noch nicht mit dem Raspi gekoppelt. Den Code zeigt der Touchscreen unter <b>Einstellungen → Raspi &amp; Handys</b>.</p>
@@ -992,6 +1068,7 @@ const PAGES=[
  {id:'outs',xp:1,t:'Gebläse & Ausgänge',c:'linear-gradient(135deg,#0fb5a6,#22c7e8)',i:SVG('<path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/>')},
  {id:'look',t:'Darstellung',c:'linear-gradient(135deg,#f472b6,#fb923c)',i:SVG('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/>')},
  {id:'bg',app:1,t:'Hintergrund & Benachrichtigungen',c:'linear-gradient(135deg,#8b5cf6,#ec4899)',i:SVG('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>')},
+ {id:'help',t:'Anleitung',c:'linear-gradient(135deg,#0ea5e9,#6366f1)',i:SVG('<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/><circle cx="12" cy="17" r=".6" fill="currentColor"/>')},
  {id:'expert',xp:1,t:'Alle Ofen-Werte',c:'linear-gradient(135deg,#64748b,#334155)',i:SVG('<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>')},
 ];
 let setPage=null,CFG={};
@@ -1002,6 +1079,7 @@ function menuSub(id){try{
  if(id==='outs'){const n=Object.keys(man.names||{}).length;return n?n+' benannt'+(man.fresh_air_bit!=null?' · Frischluftgebläse':''):'noch keine benannt'}
  if(id==='bg'){const b=JSON.parse(Ofen.bgInfo());return (b.notif_ok?(CFG.notify_state!==false?'Benachrichtigungen + Zustände':'Benachrichtigungen an'):'Benachrichtigungen aus')+' · Akku-Optimierung '+(b.battery_ok?'aus':'an')}
  if(id==='expert')return 'Jeden Wert einzeln lesen und ändern';
+ if(id==='help')return 'Einrichtung, Bedienung, Sicherheit';
  if(id==='link'){if(!linkedUI())return 'optional – Wandgerät mit Touchscreen';const t=ctlText(CTL);return t?t[0]:''}
  if(id==='look')return BGPH?'eigenes Hintergrundbild':'kein Hintergrundbild';
  if(id==='xpm')return XP?'an – sicherheitsrelevante Funktionen freigeschaltet':'aus';
@@ -1012,7 +1090,7 @@ function pageList(){const L=PAGES.find(p=>p.id==='link');L.t=linkedUI()?'Raspi &
 function buildMenu(){$('setMenu').innerHTML=pageList().map(p=>`<div class="mi" data-p="${p.id}"><div class="mic" style="background:${p.c}">${p.i}</div><div class="mt"><b>${p.t}</b><span>${esc(menuSub(p.id))}</span></div><div class="chev">›</div></div>`).join('');
  $('setMenu').querySelectorAll('.mi').forEach(m=>m.onclick=()=>openPage(m.dataset.p))}
 function openPage(id,dir){setPage=id;const P=PAGES.find(p=>p.id===id);
- $('setTitle').textContent=P?P.t:'Einstellungen';$('setMenu').hidden=!!id;
+ $('setTitle').textContent=P?P.t:'Einstellungen';$('setMenu').hidden=!!id;$('setHelp').hidden=!id||id==='help'||!HELP_FOR[id];
  document.querySelectorAll('#t-set [data-pg]').forEach(c=>c.hidden=c.dataset.pg!==id);
  if(id==='pellet'){loadPstop();hopCfgLoad()}if(id==='bg'){bgRefresh();loadCfg()}if(id==='hm')hmLoad();if(id==='link')lkLoad();
  if(!id){loadCfg().then(buildMenu);if(HM===null)hmLoad().then(buildMenu)}
@@ -1028,6 +1106,13 @@ function quitApp(){
   (run?'\n\nDer Ofen läuft gerade und wird NICHT gestoppt – er regelt dann nur noch nach seinem eigenen Fühler. Zum Stoppen vorher „Ausschalten“.':'')))return false;
  toast('Funktionen werden beendet …');try{Ofen.quitApp()}catch(e){toast('Beenden nicht möglich',true)}return true}
 $('fnOn').addEventListener('change',()=>{if($('fnOn').checked)return;if(!quitApp())$('fnOn').checked=true});
+/* Anleitung */
+const HELP_FOR={conn:'h-start',link:'h-link',pellet:'h-pellet',hm:'h-hm',xpm:'h-xpm',outs:'h-xpm',expert:'h-xpm',bg:'h-bg',look:'h-home'};
+function helpFor(page){help(HELP_FOR[page]||'h-start')}
+function help(sec){tab('set');openPage('help');const d=$(sec);if(!d)return;
+ document.querySelectorAll('.help details').forEach(x=>x.open=x===d);
+ setTimeout(()=>{d.scrollIntoView({behavior:'smooth',block:'start'});d.classList.remove('flash');void d.offsetWidth;d.classList.add('flash')},300)}
+function welcomeDone(open){$('welcome').hidden=true;try{localStorage.setItem('helpSeen','1')}catch(e){}if(open)help('h-start')}
 function setBack(){if(setPage)openPage(null,-1);else tab(lastMain,-1)}
 
 $('nsOn').addEventListener('change',()=>api('config',{notify_state:$('nsOn').checked}).then(()=>toast($('nsOn').checked?'Zustandsmeldungen an':'Zustandsmeldungen aus')).catch(e=>toast(e.message,true)));
@@ -1176,10 +1261,12 @@ function bgRefresh(){try{const b=JSON.parse(Ofen.bgInfo());
  $('bgNotT').textContent=b.notif_ok?'Erlaubt – Warnungen kommen auch auf die Uhr.':'Nicht erlaubt – keine Warnungen.';$('bgNotB').hidden=b.notif_ok;
  $('ver').textContent='Version '+b.version}catch(e){}}
 window.onAppResume=()=>{bgRefresh();refresh()};
-window.goBack=()=>{if(curTab==='set'){setBack();return true}if(curTab!=='ofen'){tab('ofen',-1);return true}return false};
+window.goBack=()=>{if(!$('welcome').hidden){welcomeDone(false);return true}if(curTab==='set'){setBack();return true}if(curTab!=='ofen'){tab('ofen',-1);return true}return false};
 
 /* Start */
 let t0='ofen';try{t0=localStorage.getItem('tab')||'ofen'}catch(e){}applyHm();tab(mainTabs().includes(t0)?t0:'ofen',0);
 buildNames();selChips();manRefresh();setInterval(()=>{if(!document.hidden)manRefresh()},1000);
 loadCfg(true).then(()=>{if(APPON)refresh()});
+/* Beim ersten Start: Sicherheitshinweis + Anleitung anbieten */
+try{if(!WEB&&!localStorage.getItem('helpSeen'))$('welcome').hidden=false}catch(e){}
 </script></body></html>
