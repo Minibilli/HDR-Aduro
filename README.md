@@ -32,7 +32,7 @@ Die App wird kostenlos und ohne Gewähr für Funktion, Richtigkeit der Anzeigen 
 
 ## Welche Öfen?
 
-Gedacht für die **Aduro-Hybridöfen H1, H2, H3 Lux, H4 Lux, H5 und H6 Lux**. Sie haben alle eine Steuerung von **NBE** mit eingebautem WLAN (Aufkleber „NBE – powered by nature“ mit Seriennummer und Passwort, meist hinten unten am Ofen).
+Gedacht für die **Aduro-Hybridöfen H1, H2, H3 Lux, H4 Lux, H5 und H6 Lux**. Sie haben alle eine Steuerung von **NBE** mit eingebautem WLAN (Aufkleber „NBE – powered by nature“ mit Seriennummer und Passwort; beim Aduro H1 innen in der Tür zum Pelletbehälter).
 
 **Getestet wurde die App nur mit einem Aduro H1.** Bei den anderen Modellen ist sie sehr wahrscheinlich nutzbar, aber ungeprüft. NBE-Pelletkessel und -brenner (RTB, BS+, StokerCloud) sprechen ein ähnliches Protokoll, werden aber nicht unterstützt.
 
