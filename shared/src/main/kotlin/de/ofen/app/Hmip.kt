@@ -145,27 +145,34 @@ object Hmip {
     @Volatile private var cacheTime = 0L
     @Volatile var error = ""
     private val lock = Any()
+    /** Nach einem Fehler nicht sofort wieder fragen – sonst sperrt die Cloud wegen zu vieler Anfragen (Fehler 429) */
+    @Volatile private var nextTry = 0L
 
     /** Holt die Räume/Sensoren neu, höchstens alle 3 Minuten (außer force). */
     fun refresh(force: Boolean = false): JSONArray? {
         if (!connected()) return null
         synchronized(lock) {
-            if (!force && cache != null && System.currentTimeMillis() - cacheTime < REFRESH_MS) return cache
+            val now = System.currentTimeMillis()
+            if (!force && cache != null && now - cacheTime < REFRESH_MS) return cache
+            if (now < nextTry && (!force || error.contains("429"))) return cache
             val c = Stove.cfg()
             val ap = c.getString("hm_ap"); var rest = c.getString("hm_rest"); val token = c.getString("hm_token")
             try {
                 var (code, txt) = post("$rest/hmip/home/getCurrentState", characteristics(ap), headers(ap, token))
-                if (code != 200 && code != 403) { // Server gewechselt? Adresse neu nachschlagen
+                if (code != 200 && code != 403 && code != 429) { // Server gewechselt? Adresse neu nachschlagen
                     rest = lookup(ap); c.put("hm_rest", rest); Stove.saveCfg(c)
                     val r = post("$rest/hmip/home/getCurrentState", characteristics(ap), headers(ap, token)); code = r.first; txt = r.second
                 }
                 if (code == 403) throw HmipError("Homematic-Zugang abgelaufen – bitte unter Einstellungen neu verbinden.")
+                if (code == 429) throw HmipError("Homematic-Cloud: zu viele Anfragen (Fehler 429) – neuer Versuch in 10 Minuten")
                 if (code != 200) throw HmipError("Homematic-Cloud meldet Fehler $code")
-                cache = parse(JSONObject(txt)); cacheTime = System.currentTimeMillis(); error = ""
+                cache = parse(JSONObject(txt)); cacheTime = System.currentTimeMillis(); error = ""; nextTry = 0
             } catch (e: HmipError) {
                 error = e.message ?: "Fehler"
+                nextTry = System.currentTimeMillis() + if (error.contains("429")) 10 * 60_000L else 2 * 60_000L
             } catch (e: Exception) {
                 error = "Homematic nicht erreichbar (${e.javaClass.simpleName})"
+                nextTry = System.currentTimeMillis() + 2 * 60_000L
             }
             return cache
         }

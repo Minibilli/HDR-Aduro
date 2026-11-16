@@ -117,6 +117,15 @@ object Api {
                 if (b.has("bg_dim")) c.put("bg_dim", b.optInt("bg_dim").coerceIn(0, 80))
                 if (b.has("card_alpha")) c.put("card_alpha", b.optInt("card_alpha").coerceIn(30, 100))
                 if (b.has("hm_ctrl")) {
+                    // Nur auf Homematic umschalten, wenn gerade aktuelle Werte da sind
+                    if (b.optBoolean("hm_ctrl") && !c.optBoolean("hm_ctrl")) {
+                        if (!Hmip.connected()) throw StoveError("Homematic ist nicht verbunden.")
+                        Hmip.refresh()
+                        val age = Hmip.ageSeconds()
+                        if (Hmip.error.isNotBlank() || age < 0 || age > 15 * 60)
+                            throw StoveError("Homematic liefert gerade keine aktuellen Werte" +
+                                (if (Hmip.error.isNotBlank()) " (${Hmip.error})" else "") + ". Umschalten geht erst, wenn die Verbindung wieder steht.")
+                    }
                     if (c.optBoolean("hm_ctrl") && !b.optBoolean("hm_ctrl")) Stove.restoreBoilerTarget(c)
                     c.put("hm_ctrl", b.optBoolean("hm_ctrl"))
                 }

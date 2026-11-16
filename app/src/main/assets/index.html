@@ -233,7 +233,8 @@ body.noxp .xp{display:none!important}
 #pelletCard{padding:14px 16px}#pelletCard h2{margin:0 0 8px}
 .h2r{display:flex;align-items:center;justify-content:center;gap:10px}.h2r h2{flex:none;margin-bottom:8px}
 #ctlCol>h2{text-align:center}
-.card.dim{opacity:.45;filter:grayscale(1);pointer-events:none}.apMini{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:12px;font-weight:800;color:var(--mute);cursor:pointer}
+.standby{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 14px;padding:12px 14px;border-radius:16px;font-size:14px;font-weight:700;color:var(--mute);background:color-mix(in srgb,var(--card) 70%,transparent);border:1px dashed color-mix(in srgb,var(--mute) 45%,transparent)}
+.standby[hidden]{display:none}.standby svg{width:18px;height:18px;flex:0 0 18px}.apMini{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:12px;font-weight:800;color:var(--mute);cursor:pointer}
 .sw.sm{position:relative;width:40px;height:24px;flex:0 0 40px;display:inline-block}.sw.sm i::after{width:18px;height:18px}.sw.sm input:checked+i::after{transform:translateX(16px)}
 .apT{font-size:12.5px;color:var(--mute);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.apT[hidden]{display:none}
 .duo.two .seg button{padding:7px 6px;font-size:14px}.seg button{padding:9px 6px}
@@ -250,6 +251,8 @@ body.hasbg .fnPill,body.hasbg .topbar .net{background:color-mix(in srgb,var(--ca
 .heroR{position:absolute;top:14px;right:14px;display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:1}
 .heroR .pbtn{display:flex;align-items:center;gap:6px;padding:9px 14px;border-radius:999px;font-size:14px;font-weight:800;background:rgba(255,255,255,.94);color:#0f9f76;box-shadow:0 3px 10px rgba(0,0,0,.15);white-space:nowrap}
 .heroR .pbtn{width:132px;justify-content:center}
+/* Zustandstext darf nicht unter die Knöpfe laufen */
+.hero>.chip{max-width:calc(100% - 150px)}.hero>.chip i{flex:none}.hero>.chip #state{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .heroR .pbtn.offb{color:#e11d48}
 /* aktiver Zustand: Schaltfläche invertiert */
 .heroR .pbtn.act{background:#0f9f76;color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.9),0 3px 10px rgba(0,0,0,.15)}
@@ -334,6 +337,7 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
       <div class="row"><input id="hopKg" type="number" inputmode="decimal" placeholder="Inhalt jetzt in kg"><button style="flex:0 0 90px" onclick="hopFill(+$('hopKg').value)">Setzen</button></div>
       <p class="mute" style="margin:8px 0 0">Der Ofen zählt ab dem eingetragenen Wert selbst herunter (Schnecke: <span id="hopAug">–</span> g / 6 min).</p>
     </div>
+  <div class="standby" id="pelletStandby" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.4 1.2-3.8 2.5-5"/></svg><span>Pelletsteuerung bei Holzverbrennung im Standby</span></div>
   <div class="card" id="pelletCard">
     <div class="duo" id="duo"><div><div class="h2r"><h2>Heizstufe</h2><label class="apMini" title="Heizstufe automatisch anpassen"><span>Auto</span><span class="sw sm"><input type="checkbox" id="apOn"><i></i></span></label></div>
     <div class="seg" id="lv"><button data-l="1" onclick="power(1)">Niedrig</button><button data-l="2" onclick="power(2)">Mittel</button><button data-l="3" onclick="power(3)">Hoch</button></div></div>
@@ -470,7 +474,7 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
       <li><b>Ofen an / Ofen aus</b>: der gefüllte Knopf zeigt den aktuellen Zustand.</li>
       <li><b>Kacheln antippen</b> (mit Pfeil ›): „Ziel“ bzw. „Raum“ öffnet die Zieltemperatur, „Warnung unter“ die Holz-Warnung.</li>
       <li><b>Pellets</b>-Balken antippen: nach dem Nachfüllen „Voll“ oder die Menge eintragen. Der Ofen zählt den Verbrauch danach selbst.</li>
-      <li><b>Heizstufe</b> Niedrig / Mittel / Hoch und darunter die <b>Raum-Zieltemperatur</b> des Ofens mit – und +. Im Holzbetrieb ist dieses Feld ausgegraut, weil dann das Holz heizt.</li>
+      <li><b>Heizstufe</b> Niedrig / Mittel / Hoch und darunter die <b>Raum-Zieltemperatur</b> des Ofens mit – und +. Im Holzbetrieb ist die Pelletsteuerung ausgeblendet („im Standby“), weil dann das Holz heizt.</li>
       <li><b>Auto</b> neben „Heizstufe“: die App wählt die Stufe selbst – ab 1,5 °C unter Ziel „Hoch“, ab 0,5 °C „Mittel“, sonst „Niedrig“. Sie wechselt höchstens alle 10 Minuten.</li>
       <li>Unten in der Leiste: <b>Bauteile</b> (Gebläse, Schnecke …) und mit Homematic die <b>Räume</b>.</li></ul></div></details>
     <details id="h-off"><summary>„Ofen aus“ und „Ausgeschaltet“</summary><div>
@@ -845,8 +849,8 @@ function render(s){
  /* Ofen an / Ofen aus: beide gleich groß, der aktuelle Zustand ist invertiert */
  const pb=$('powerBtn'),hb=$('haltBtn');pb.disabled=hb.disabled=false;$('powerT').textContent='Ofen an';
  pb.classList.toggle('act',!hal&&running);hb.classList.toggle('act',hal);
- /* Holzbetrieb: Heizstufe/Ziel gelten nicht – ausgegraut statt ausgeblendet */
- $('pelletCard').hidden=false;$('pelletCard').classList.toggle('dim',w);
+ /* Holzbetrieb: Pelletsteuerung ausblenden, nur kurzer Hinweis */
+ $('pelletCard').hidden=w;$('pelletStandby').hidden=!w;
  placeFan();
  const lv={'10':1,'50':2,'100':3}[String(s.fixed_power)];document.querySelectorAll('#lv button').forEach(b=>b.classList.toggle('sel',+b.dataset.l===lv));
  apRender(s);
