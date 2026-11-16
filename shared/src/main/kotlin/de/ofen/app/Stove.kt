@@ -866,6 +866,8 @@ object Stove {
     private val manLock = Any()
     const val N_OUTPUTS = 8
     private const val MAX_MIN = 240.0
+    /** Unter diesem Rauchgaswert gilt der Ofen als kalt – erst dann dürfen Schnecke, Zünder usw. von Hand laufen */
+    const val MAN_COLD_SMOKE = 60.0
 
     private fun bits(): Int = man.deadline.keys.fold(0) { acc, b -> acc or (1 shl b) }
 
@@ -887,14 +889,20 @@ object Stove {
             if (on) {
                 if (!names.has((bit + 1).toString())) throw StoveError("Nur benannte Ausgänge können geschaltet werden.")
                 if (man.wood && bit != fan) throw StoveError("Im Holzbetrieb ist nur das Frischluftgebläse freigegeben.")
-                if (!man.active) {
-                    val st = readStatus().optString("state")
-                    if (st == "9") {
-                        if (bit != fan) throw StoveError("Im Holzbetrieb ist nur das Frischluftgebläse freigegeben.")
-                        man.wood = true
-                    } else if (st in BURNING) {
-                        throw StoveError("Handbetrieb geht nur bei gestopptem Ofen (im Holzbetrieb nur das Frischluftgebläse).")
-                    }
+                // Bei JEDEM Einschalten prüfen (nicht nur beim ersten): der Ofen kann inzwischen heiß geworden sein
+                val now = readStatus()
+                val st = now.optString("state")
+                val smoke = now.optString("smoke_temp").toDoubleOrNull()
+                // Heiß = Feuer oder Glut im Brennraum, egal welchen Zustand die Steuerung meldet (z. B. „Warten“ bei 200 °C)
+                val hot = smoke == null || smoke >= MAN_COLD_SMOKE
+                if (st == "9") {
+                    if (bit != fan) throw StoveError("Im Holzbetrieb ist nur das Frischluftgebläse freigegeben.")
+                    man.wood = true
+                } else if (st in BURNING) {
+                    throw StoveError("Handbetrieb geht nur bei gestopptem Ofen (im Holzbetrieb nur das Frischluftgebläse).")
+                } else if (hot && bit != fan) {
+                    throw StoveError(if (smoke == null) "Rauchgastemperatur unbekannt – Bauteile nur bei kaltem Ofen schalten."
+                        else "Der Ofen ist noch heiß (Rauchgas %.0f °C). Bauteile wie die Schnecke lassen sich erst unter %.0f °C schalten – nur das Frischluftgebläse geht.".format(smoke, MAN_COLD_SMOKE))
                 }
                 if (minutes == null) {
                     if (bit != fan) throw StoveError("Ohne Zeitlimit darf nur das Frischluftgebläse laufen.")
@@ -946,6 +954,15 @@ object Stove {
             synchronized(manLock) {
                 if (!man.active && man.deadline.isEmpty()) return
                 val now = System.currentTimeMillis()
+                // Sicherheitsnetz: wird der Ofen während des Handbetriebs heiß, alles außer dem Frischluftgebläse aus
+                val c = cfg(); val fan = if (c.has("fresh_air_bit")) c.optInt("fresh_air_bit") else -1
+                val smoke = lastStatus?.optString("smoke_temp")?.toDoubleOrNull()
+                if (smoke != null && smoke >= MAN_COLD_SMOKE && man.deadline.keys.any { it != fan }) {
+                    man.deadline.keys.filter { it != fan }.forEach { man.deadline.remove(it) }
+                    applyMan()
+                    man.error = "Ofen heiß geworden (Rauchgas %.0f °C) – Bauteile ausgeschaltet.".format(smoke)
+                    return
+                }
                 val expired = man.deadline.filter { (_, d) -> d != null && d <= now }.keys
                 expired.forEach { man.deadline.remove(it) }
                 if (expired.isNotEmpty()) applyMan()

@@ -489,7 +489,8 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
       <li><b>Ofen nach Raum steuern</b> (Experte): startet den Ofen 0,5 °C unter dem Ziel, stoppt ihn 0,5 °C darüber; mindestens 60 min Laufzeit und 30 min Pause. <b>Startet den Ofen selbsttätig.</b></li>
       <li><b>Heizkörper im Ofenraum schließen</b>: heizt der Ofen, gehen die Ventile in seinem Raum zu; danach kommt der Wochenplan zurück. Ist der Ofen 30 min nicht erreichbar, öffnet die App sie sicherheitshalber wieder.</li></ul></div></details>
     <details id="h-xpm"><summary>Expertenmodus</summary><div>
-      <p>Schaltet Funktionen frei, die direkt in die Ofensteuerung eingreifen: Gebläse und Bauteile von Hand schalten, alle Ofen-Werte ändern, Holzverbrennung Temperatur, Pellets früher stoppen, automatischer Pelletstart und Raumsteuerung. Freischalten nur nach Bestätigung eines Sicherheitshinweises. Falsche Werte können den Ofen beschädigen oder unsicher machen.</p></div></details>
+      <p>Schaltet Funktionen frei, die direkt in die Ofensteuerung eingreifen: Gebläse und Bauteile von Hand schalten, alle Ofen-Werte ändern, Holzverbrennung Temperatur, Pellets früher stoppen, automatischer Pelletstart und Raumsteuerung. Freischalten nur nach Bestätigung eines Sicherheitshinweises. Falsche Werte können den Ofen beschädigen oder unsicher machen.</p>
+      <p><b>Bauteile von Hand</b> (Schnecke, Zünder …) gehen nur bei <b>kaltem Ofen</b> – Rauchgas unter 60 °C, egal welchen Zustand der Ofen meldet. Wird der Ofen dabei heiß, schaltet die App sie sofort ab. Bei heißem Ofen ist nur das Frischluftgebläse freigegeben.</p></div></details>
     <details id="h-bg" class="apponly"><summary>Hintergrund &amp; Benachrichtigungen</summary><div>
       <p>Damit Warnungen auch bei geschlossener App kommen, unter <b>Einstellungen → Hintergrund &amp; Benachrichtigungen</b>:</p>
       <ul><li><b>Akku-Optimierung ausschalten</b> – sonst beendet Android die Überwachung.</li>
@@ -935,7 +936,8 @@ function fanBadge(){const fb=man.fresh_air_bit,k=fb==null?null:String(fb),on=k!=
 async function manRefresh(){if(!APPON)return;try{man=await api('manual');fanBadge();
  for(let o=1;o<=8;o++){const i=$('nm'+o);if(document.activeElement!==i)i.value=man.names[o]||''}
  renderOuts();manVisible();if(curTab==='parts'&&S)renderParts(S);
- $('manInfo').textContent=man.error?'Verbindungsproblem: '+man.error:(man.wood?'Holzbetrieb: nur das Frischluftgebläse ist freigegeben.':'');
+ const smk=S?parseFloat(S.smoke_temp):NaN;
+ $('manInfo').textContent=man.error?(/^Ofen heiß/.test(man.error)?man.error:'Verbindungsproblem: '+man.error):(man.wood?'Holzbetrieb: nur das Frischluftgebläse ist freigegeben.':(!isNaN(smk)&&smk>=60?'Ofen ist noch heiß (Rauchgas '+Math.round(smk)+' °C): Schnecke, Zünder usw. erst unter 60 °C – nur das Frischluftgebläse geht.':''));
  const fb=man.fresh_air_bit,has=fb!=null;$('fanCtl').hidden=!has;$('fanHint').hidden=has;
  const on=has&&String(fb) in man.running,s=has?man.running[String(fb)]:null;
  $('fanIco').classList.toggle('on',on);$('fanSub').textContent=on?(s==null?'Läuft bis Stopp':'Läuft · schaltet selbst ab'):'Aus';$('fanT').textContent=on&&s!=null?fmt(s):'';
