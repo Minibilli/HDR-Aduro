@@ -196,6 +196,8 @@ body.hasbg .hero[data-mode=err],body.hasbg .hero[data-mode=off]{background:color
 .fanbadge{position:relative;width:132px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;
  background:rgba(11,16,32,.55);color:#fff;box-shadow:0 3px 10px rgba(15,181,166,.35)}
 .fanbadge[hidden]{display:none}
+/* läuft das Gebläse, wird die Karte etwas höher: Abstand zwischen Gebläse-Leiste und Balken darunter */
+.hero.fanon .blabel{margin-bottom:34px;transition:margin .3s}
 .fanbadge::after{content:'';position:absolute;left:0;bottom:0;height:3px;width:var(--p,100%);background:linear-gradient(90deg,#22c7e8,#0fb5a6);transition:width 1s linear}
 .fanbadge .in{position:relative;display:flex;align-items:center;gap:7px;line-height:1}
 .fanbadge .in svg{width:18px;height:18px;color:var(--fresh2);animation:spin 1.2s linear infinite}
@@ -981,6 +983,7 @@ async function allOff(){await run(()=>api('manual/off',{}),'Alles aus');manRefre
 /* Countdown-Ring: Gesamtdauer merken wir uns beim ersten Sehen bzw. wenn die Restzeit steigt (neu gestartet) */
 let fanTotal=0;
 function fanBadge(){const fb=man.fresh_air_bit,k=fb==null?null:String(fb),on=k!=null&&k in (man.running||{});const b=$('fanBadge');
+ $('hero').classList.toggle('fanon',on);
  if(!on){b.hidden=true;fanTotal=0;return}
  b.hidden=false;const r=man.running[k];
  if(r==null){$('fanBadgeT').textContent='∞';b.style.setProperty('--p','100%');fanTotal=0;return}
