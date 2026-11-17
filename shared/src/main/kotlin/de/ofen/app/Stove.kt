@@ -12,7 +12,11 @@ object Stove {
     private lateinit var plat: Platform
 
     fun init(p: Platform) {
-        if (!::plat.isInitialized) plat = p
+        if (!::plat.isInitialized) {
+            plat = p
+            // „Pellets von der App gestoppt“ überlebt Neustart/Update der App – sonst hält sie den Holzbetrieb für „Warten“
+            try { cfg().optJSONObject("early_rt")?.let { early.stopped = it.optBoolean("stopped"); early.msg = it.optString("msg") } } catch (e: Exception) { }
+        }
     }
 
     val platform: Platform get() = plat
@@ -211,7 +215,7 @@ object Stove {
         val mode = op["operation_mode"] ?: ""
         val alarm = op["off_on_alarm"] ?: ""
         // gestoppt, aber Holz brennt (Pellets von der App oder im Handbetrieb aus) -> nicht „Per Taste gestoppt“ zeigen
-        val woodStop = st == "14" && (early.stopped || man.wood)
+        val woodStop = st in setOf("0", "14", "23") && (early.stopped || man.wood)
         s.put("state", st).put("state_text", if (woodStop) "Holzbetrieb (Pellets aus)" else STATE_TEXT[st] ?: "Zustand $st")
         s.put("substate_text", SUBSTATE_TEXT[sub] ?: sub)
         s.put("room_temp", op["boiler_temp"] ?: JSONObject.NULL)
@@ -307,7 +311,7 @@ object Stove {
         if (old == null || old == st || st.isBlank()) return
         if (!cfg().optBoolean("notify_state", true)) return
         // „Per Taste gestoppt“ hilft nicht, wenn die App selbst gestoppt hat (Holzbetrieb, Ausschalten, Raumsteuerung)
-        if (st == "14" && (early.stopped || man.wood)) return   // dazu gibt es schon die Meldung „Pellets gestoppt“
+        if (st in setOf("0", "14", "23") && (early.stopped || man.wood)) return   // dazu gibt es schon die Meldung „Pellets gestoppt“
         val byApp = st == "14" && System.currentTimeMillis() - appStopAt < 3 * 60_000L
         val name = when {
             byApp && cfg().optBoolean("halted") -> "Ausgeschaltet (App)"
@@ -357,7 +361,22 @@ object Stove {
     private const val EARLY_HOLD_MS = 30_000L
     private const val EARLY_RESTART_BELOW = 100.0
 
-    fun cancelEarly() { early.stopped = false; early.msg = "" }
+    fun cancelEarly() {
+        val was = early.stopped || early.msg.isNotEmpty()
+        early.stopped = false; early.msg = ""
+        if (was) saveEarly()
+    }
+
+    /** Zustand „Pellets früher gestoppt“ dauerhaft merken */
+    fun saveEarly() {
+        try {
+            synchronized(this) {
+                val c = cfg()
+                if (early.stopped) c.put("early_rt", JSONObject().put("stopped", true).put("msg", early.msg)) else c.remove("early_rt")
+                saveCfg(c)
+            }
+        } catch (e: Exception) { }
+    }
 
     private fun earlyCheck(s: JSONObject) {
         val c = cfg()
@@ -387,6 +406,7 @@ object Stove {
                 set("misc.stop", "1")
                 early.stopped = true; early.aboveSince = 0
                 early.msg = "Pellets bei ${t.toInt()} °C Rauchgas von der App gestoppt"
+                saveEarly()
                 plat.alert(Alerts.EARLY, "Pellets gestoppt", "Holz brennt – Rauchgas ${t.toInt()} °C über ${thr.toInt()} °C")
                 info.put("stopped", true).put("msg", early.msg)
             }

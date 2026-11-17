@@ -154,7 +154,7 @@ object Control {
             Stove.saveCfg(c)
         }
         p.optJSONObject("rt")?.let { rt ->
-            Stove.early.stopped = rt.optBoolean("early_stopped"); Stove.early.msg = rt.optString("early_msg")
+            Stove.early.stopped = rt.optBoolean("early_stopped"); Stove.early.msg = rt.optString("early_msg"); Stove.saveEarly()
             Stove.thermo.lastStart = rt.optLong("th_start"); Stove.thermo.lastStop = rt.optLong("th_stop")
             Stove.thermo.waitStartSent = rt.optLong("th_wait")
             Stove.apLastSet = rt.optLong("ap_last"); Stove.valve.offSince = rt.optLong("valve_off")
