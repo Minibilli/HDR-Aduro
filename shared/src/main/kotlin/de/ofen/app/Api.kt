@@ -78,10 +78,10 @@ object Api {
     }
 
     /** Sicherheitsrelevante Befehle nur im Expertenmodus */
-    private val EXPERT_ONLY = setOf("pelletstop", "manual/switch", "manual/name", "settings/read", "settings/write")
+    private val EXPERT_ONLY = setOf("pelletstop", "manual/switch", "manual/probe", "manual/name", "manual/names", "settings/read", "settings/write")
 
     /** Gerät ohne Steuerung: was die Automatiken betrifft, darf nur das steuernde Gerät ändern */
-    private val HOLDER_ONLY = setOf("expert", "manual/switch", "manual/name", "pelletstop", "settings/write", "hm/disconnect", "hopper/config")
+    private val HOLDER_ONLY = setOf("expert", "manual/switch", "manual/probe", "manual/name", "manual/names", "pelletstop", "settings/write", "hm/disconnect", "hopper/config")
 
     private fun handlePost(p: String, b: JSONObject): JSONObject {
         when (p) {
@@ -187,6 +187,27 @@ object Api {
                 return ok()
             }
             "manual/off" -> { Stove.manualAllOff(); return ok() }
+            "manual/probe" -> {
+                val out = b.optString("output").toIntOrNull() ?: return err("Ungültige Angabe")
+                Stove.manualProbe(out - 1)
+                return ok(JSONObject().put("seconds", Stove.PROBE_SEC))
+            }
+            // Alle Namen auf einmal (Vorlage oder Ergebnis des Assistenten): {names:{"1":"…",…}, fresh_air: 2}
+            "manual/names" -> {
+                val nb = b.optJSONObject("names") ?: return err("Ungültige Angabe")
+                val names = JSONObject()
+                for (k in nb.keys()) {
+                    val o = k.toIntOrNull() ?: continue
+                    val v = nb.optString(k).trim().take(30)
+                    if (o in 1..Stove.N_OUTPUTS && v.isNotBlank()) names.put(o.toString(), v)
+                }
+                val c = Stove.cfg()
+                c.put("output_names", names)
+                val fa = b.optInt("fresh_air", 0)
+                if (fa in 1..Stove.N_OUTPUTS && names.has(fa.toString())) c.put("fresh_air_bit", fa - 1) else c.remove("fresh_air_bit")
+                Stove.saveCfg(c)
+                return ok()
+            }
             "manual/name" -> {
                 val o = b.optString("output").toIntOrNull() ?: 0
                 if (o !in 1..Stove.N_OUTPUTS) return err("Unbekannter Ausgang")

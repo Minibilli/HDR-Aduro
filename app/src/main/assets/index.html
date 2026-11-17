@@ -81,6 +81,10 @@ button,a.btn{font:inherit;font-weight:700;border:0;border-radius:16px;padding:13
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}.chips button{flex:1 0 auto;padding:9px 10px;font-size:14px;border-radius:12px}
 .chips button.sel{background:color-mix(in srgb,var(--fresh) 16%,transparent);color:var(--fresh)}
 /* Lists */
+.wz .chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.wz .chips button{padding:9px 12px;font-size:14px;border-radius:12px}
+.wz .chips button.sel{background:var(--fire);color:#fff}
+.wz .big{display:block;width:100%;font-size:40px;font-weight:800;text-align:center!important;margin:6px 0 0;font-variant-numeric:tabular-nums}
+.wz .sum div{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}.wz .sum b{width:22px}
 .out{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
 .out:last-child{border-bottom:0}.out .n{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:13px;font-weight:800;background:var(--soft);color:var(--mute)}
 .out .lbl{flex:1;font-weight:600}.out button{padding:8px 14px;font-size:13.5px;border-radius:12px;min-width:76px}
@@ -380,7 +384,7 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
         <div class="chips" id="fanChips"><button data-m="5">5 min</button><button data-m="15">15 min</button><button data-m="30">30 min</button><button data-m="60">60 min</button><button data-m="stop">bis Stopp</button></div>
         <div class="row"><button class="fresh" onclick="fanStart()">Start</button><button onclick="fanStop()">Stopp</button></div>
       </div>
-      <p class="mute" id="fanHint" hidden>Unter <b>Einstellungen → Ausgänge benennen</b> einen Ausgang „Frischluftgebläse“ nennen, dann erscheint hier die Steuerung.</p>
+      <p class="mute" id="fanHint" hidden>Unter <b>Einstellungen → Ausgänge einrichten</b> die Vorlage für den Aduro H1 übernehmen oder den Assistenten starten, dann erscheint hier die Steuerung.</p>
     </div>
   </div>
   <div class="card" id="manCard" hidden>
@@ -497,6 +501,7 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
       <li><b>Heizkörper im Ofenraum schließen</b>: erst wenn der Ofen <b>sicher brennt</b> (Rauchgas 5 Minuten über 100 °C), stellt die App den Raum auf „manuell“ mit niedriger Temperatur. Ist der Ofen aus und das Rauchgas fast auf Raumtemperatur abgekühlt (höchstens 8 °C darüber, 5 Minuten lang), bekommt Homematic den Raum zurück – im Zustand von vorher, meist der Wochenplan. Ist der Ofen 30 min nicht erreichbar, gibt die App den Raum sicherheitshalber ebenfalls zurück.</li></ul></div></details>
     <details id="h-xpm"><summary>Expertenmodus</summary><div>
       <p>Schaltet Funktionen frei, die direkt in die Ofensteuerung eingreifen: Gebläse und Bauteile von Hand schalten, alle Ofen-Werte ändern, Holzverbrennung Temperatur, Pellets früher stoppen, automatischer Pelletstart und Raumsteuerung. Freischalten nur nach Bestätigung eines Sicherheitshinweises. Falsche Werte können den Ofen beschädigen oder unsicher machen.</p>
+      <p><b>Ausgänge einrichten</b> (Einstellungen → Ausgänge einrichten): Für den Aduro H1 gibt es eine fertige Belegung. Bei anderen Öfen – oder zum Prüfen – führt der <b>Assistent</b> durch die 8 Ausgänge: jeden 10 Sekunden einschalten, beobachten, benennen. Nur bei gestopptem, kaltem Ofen und mit leerer Brennschale.</p>
       <p><b>Bauteile von Hand</b> (Schnecke, Zünder …) gehen nur bei <b>kaltem Ofen</b> – Rauchgas unter 60 °C, egal welchen Zustand der Ofen meldet. Wird der Ofen dabei heiß, schaltet die App sie sofort ab. Bei heißem Ofen ist nur das Frischluftgebläse freigegeben.</p></div></details>
     <details id="h-bg" class="apponly"><summary>Hintergrund &amp; Benachrichtigungen</summary><div>
       <p>Damit Warnungen auch bei geschlossener App kommen, unter <b>Einstellungen → Hintergrund &amp; Benachrichtigungen</b>:</p>
@@ -619,6 +624,13 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
     <button style="width:100%;margin-top:14px" onclick="xpShow(true)">Hinweise lesen</button>
   </div>
   <div class="card" data-pg="outs">
+    <h2>Ausgänge einrichten</h2>
+    <p class="mute" style="margin-top:0">Die Ofensteuerung hat 8 Ausgänge (Gebläse, Schnecken, Zünder …). Welcher was ist, hängt vom Ofen ab.</p>
+    <button class="fire" style="width:100%" onclick="wzStart()">Ausgänge erkennen (Assistent)</button>
+    <button style="width:100%;margin-top:10px" onclick="presetH1()">Belegung für Aduro H1 übernehmen</button>
+    <p class="mute" style="margin-bottom:4px">Aduro H1: 1 Untere Schnecke · 2 Frischluftgebläse · 3 Obere Schnecke. Ausgänge 4–8 sind beim H1 noch nicht geprüft.</p>
+  </div>
+  <div class="card" data-pg="outs">
     <h2>Ausgänge benennen</h2>
     <p class="mute" style="margin-top:0">Nur benannte Ausgänge erscheinen unter „Gebläse“. Feld leeren = ausblenden. Der Name <b>Frischluftgebläse</b> schaltet die Gebläse-Steuerung frei.</p>
     <div id="names"></div>
@@ -669,6 +681,7 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
   </div>
 </div>
 
+<div class="welcome wz" id="wz" hidden><div class="card" id="wzBody"></div></div>
 <div class="welcome" id="welcome" hidden><div class="card">
   <h2 style="margin-top:0">Willkommen bei HDR Aduro</h2>
   <p>Inoffizielle App für Aduro-Hybridöfen mit NBE-Steuerung – ohne Cloud, direkt im Heimnetz.</p>
@@ -915,6 +928,44 @@ function selChips(){document.querySelectorAll('#fanChips button').forEach(b=>b.c
  document.querySelectorAll('#testSeg button').forEach(b=>b.classList.toggle('sel',b.dataset.v===testMin))}
 async function fanStart(){const o=man.fresh_air_bit+1;await run(()=>api('manual/switch',{output:o,on:true,minutes:fanMin}),'Frischluftgebläse an'+(fanMin==='stop'?'':' für '+fanMin+' min'));manRefresh()}
 async function fanStop(){const o=man.fresh_air_bit+1;await run(()=>api('manual/switch',{output:o,on:false}),'Frischluftgebläse aus');manRefresh()}
+/* Vorlage Aduro H1 (vom Nutzer an seinem H1 geprüft: 1–3) */
+const H1_NAMES={1:'Untere Schnecke',2:'Frischluftgebläse',3:'Obere Schnecke'};
+async function presetH1(){if(!XP){toast('Erst den Expertenmodus einschalten',true);return}
+ if(!confirm('Belegung für Aduro H1 übernehmen?\n\n1 Untere Schnecke\n2 Frischluftgebläse\n3 Obere Schnecke\n\nBisherige Namen werden ersetzt. Ausgänge 4–8 bleiben unbenannt (beim H1 noch nicht geprüft) – die kannst du mit dem Assistenten prüfen.'))return;
+ try{await api('manual/names',{names:H1_NAMES,fresh_air:2});toast('Belegung Aduro H1 übernommen')}catch(e){toast(e.message,true)}manRefresh()}
+/* Assistent „Ausgänge erkennen“: jeden Ausgang 10 s einschalten, beobachten, benennen */
+const WZ_OPTS=['Frischluftgebläse','Rauchgasgebläse','Untere Schnecke','Obere Schnecke','Schnecke','Zünder','Reinigung','Pumpe'];
+let WZ=null,wzT=null;
+function wzStart(){if(!XP){toast('Erst den Expertenmodus einschalten',true);return}
+ WZ={step:0,o:1,names:{},run:0,done:{}};for(let o=1;o<=8;o++)WZ.names[o]=(man.names&&man.names[o])||'';wzRender();$('wz').hidden=false}
+async function wzClose(){clearInterval(wzT);$('wz').hidden=true;WZ=null;try{await api('manual/off',{})}catch(e){}manRefresh()}
+async function wzProbe(){clearInterval(wzT);try{const r=await api('manual/probe',{output:WZ.o});WZ.run=(r&&r.seconds)||10;WZ.done[WZ.o]=1}catch(e){toast(e.message,true);return}
+ wzRender();wzT=setInterval(()=>{if(!WZ){clearInterval(wzT);return}WZ.run--;if(WZ.run<=0){WZ.run=0;clearInterval(wzT)}wzRender()},1000)}
+async function wzStop(){clearInterval(wzT);if(WZ)WZ.run=0;try{await api('manual/off',{})}catch(e){}wzRender()}
+function wzPick(v){WZ.names[WZ.o]=v;wzRender()}
+async function wzGo(d){if(WZ.run>0)await wzStop();WZ.o+=d;if(WZ.o<1){WZ.o=1;WZ.step=0}if(WZ.o>8){WZ.o=8;WZ.step=2}wzRender()}
+async function wzSave(){const names={};let fa=0;for(let o=1;o<=8;o++){const v=(WZ.names[o]||'').trim();if(v){names[o]=v;if(!fa&&/frischluft/i.test(v))fa=o}}
+ try{await api('manual/names',{names,fresh_air:fa});toast('Ausgänge gespeichert')}catch(e){toast(e.message,true);return}wzClose()}
+function wzRender(){if(!WZ)return;const b=$('wzBody');const off='<button style="width:100%;margin-top:10px" onclick="wzClose()">Abbrechen – alles aus</button>';
+ if(WZ.step===0){b.innerHTML=`<h2 style="margin-top:0">Ausgänge erkennen</h2>
+  <p>Der Assistent schaltet die Ausgänge 1 bis 8 nacheinander für je <b>10 Sekunden</b> ein. Du schaust und hörst, was passiert, und wählst den passenden Namen.</p>
+  <p><b>⚠️ Vorher:</b></p><ul style="padding-left:20px;margin:6px 0"><li>Ofen ist <b>gestoppt und kalt</b> (Rauchgas unter 60 °C) – sonst lässt die App nichts einschalten.</li>
+  <li><b>Brennschale leeren</b>, Ofentür schließen. Eine Schnecke fördert in 10 s ein paar Pellets, der Zünder wird heiß.</li>
+  <li>Beim Ofen bleiben. „Abbrechen“ schaltet sofort alles aus.</li></ul>
+  <button class="fire" style="width:100%;margin-top:8px" onclick="WZ.step=1;wzRender()">Verstanden – los geht’s</button>${off}`;return}
+ if(WZ.step===2){b.innerHTML=`<h2 style="margin-top:0">Übersicht</h2><div class="sum">${[1,2,3,4,5,6,7,8].map(o=>`<div><b>${o}</b><span>${WZ.names[o]?esc(WZ.names[o]):'<span class="mute">– ausgeblendet</span>'}</span></div>`).join('')}</div>
+  <p class="mute">Nur benannte Ausgänge erscheinen später unter „Gebläse“. „Frischluftgebläse“ schaltet die Gebläse-Steuerung frei.</p>
+  <button class="fire" style="width:100%" onclick="wzSave()">Speichern</button><button style="width:100%;margin-top:10px" onclick="WZ.step=1;wzRender()">Zurück</button>${off}`;return}
+ const o=WZ.o,cur=WZ.names[o]||'',custom=cur&&!WZ_OPTS.includes(cur);
+ b.innerHTML=`<p class="mute" style="margin:0">Ausgang ${o} von 8</p><h2 style="margin:4px 0 0">Ausgang ${o}</h2>
+  ${WZ.run>0?`<div class="big">${WZ.run} s</div><p style="text-align:center;margin:0">läuft – was passiert?</p><button style="width:100%;margin-top:10px" onclick="wzStop()">Sofort aus</button>`
+   :`<button class="fire" style="width:100%;margin-top:12px" onclick="wzProbe()">${WZ.done[o]?'Nochmal 10 s einschalten':'10 s einschalten'}</button>`}
+  <p style="margin:14px 0 0"><b>Was ist passiert?</b></p>
+  <div class="chips">${WZ_OPTS.map(v=>`<button class="${cur===v?'sel':''}" data-v="${esc(v)}">${esc(v)}</button>`).join('')}<button class="${cur===''?'sel':''}" data-v="">Nichts / unklar</button></div>
+  <input id="wzOwn" placeholder="oder eigener Name" value="${custom?esc(cur):''}">
+  <div class="row" style="margin-top:14px"><button onclick="wzGo(-1)">Zurück</button><button class="fire" onclick="wzGo(1)">${o<8?'Weiter':'Übersicht'}</button></div>${off}`;
+ b.querySelectorAll('.chips button').forEach(x=>x.onclick=()=>wzPick(x.dataset.v));
+ $('wzOwn').addEventListener('change',e=>{WZ.names[o]=e.target.value.trim();wzRender()})}
 function buildNames(){const box=$('names');box.innerHTML='';for(let o=1;o<=8;o++){const r=document.createElement('div');r.className='out';
  r.innerHTML=`<div class="n">${o}</div><input id="nm${o}" placeholder="unbenannt">`;box.append(r);
  const i=r.querySelector('input');i.addEventListener('change',()=>saveName(o,i.value))}}
@@ -1075,7 +1126,7 @@ const PAGES=[
  {id:'pellet',t:'Pellets & Holz',c:'linear-gradient(135deg,#ff8a3d,#ff4f6d)',i:SVG('<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.4 1.2-4 2.4-5.2.3 1.5 1 2.5 2 3C11 8 11.5 5.3 12 3z"/>')},
  {id:'hm',t:'Homematic IP',c:'linear-gradient(135deg,#22c55e,#0fb5a6)',i:SVG('<path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/>')},
  {id:'xpm',t:'Expertenmodus',c:'linear-gradient(135deg,#f59e0b,#ef4444)',i:SVG('<path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5"/><circle cx="12" cy="18" r=".8" fill="currentColor"/>')},
- {id:'outs',xp:1,t:'Gebläse & Ausgänge',c:'linear-gradient(135deg,#0fb5a6,#22c7e8)',i:SVG('<path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/>')},
+ {id:'outs',xp:1,t:'Ausgänge einrichten',c:'linear-gradient(135deg,#0fb5a6,#22c7e8)',i:SVG('<path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/>')},
  {id:'look',t:'Darstellung',c:'linear-gradient(135deg,#f472b6,#fb923c)',i:SVG('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/>')},
  {id:'bg',app:1,t:'Hintergrund & Benachrichtigungen',c:'linear-gradient(135deg,#8b5cf6,#ec4899)',i:SVG('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>')},
  {id:'help',t:'Anleitung',c:'linear-gradient(135deg,#0ea5e9,#6366f1)',i:SVG('<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/><circle cx="12" cy="17" r=".6" fill="currentColor"/>')},
@@ -1086,7 +1137,7 @@ function menuSub(id){try{
  if(id==='conn')return CFG.ip?'IP '+CFG.ip+' · VPN: '+($('vpnApp').selectedOptions[0]?.textContent||''):'Noch nicht eingerichtet';
  if(id==='pellet')return 'Früher stoppen '+(CFG.early_stop?'ab '+CFG.early_temp+' °C':'aus')+' · Pelletstart '+(CFG.early_restart?'unter '+(CFG.early_restart_temp||100)+' °C':'aus');
  if(id==='hm')return HM&&HM.connected?('verbunden'+(HM.ctrl?' · Raumsteuerung an':'')+(HM.valve?' · Heizkörper-Steuerung an':'')):'nicht verbunden';
- if(id==='outs'){const n=Object.keys(man.names||{}).length;return n?n+' benannt'+(man.fresh_air_bit!=null?' · Frischluftgebläse':''):'noch keine benannt'}
+ if(id==='outs'){const n=Object.keys(man.names||{}).length;return n?n+' benannt'+(man.fresh_air_bit!=null?' · Frischluftgebläse':''):'noch nicht eingerichtet – Assistent oder Vorlage'}
  if(id==='bg'){const b=JSON.parse(Ofen.bgInfo());return (b.notif_ok?(CFG.notify_state!==false?'Benachrichtigungen + Zustände':'Benachrichtigungen an'):'Benachrichtigungen aus')+' · Akku-Optimierung '+(b.battery_ok?'aus':'an')}
  if(id==='expert')return 'Jeden Wert einzeln lesen und ändern';
  if(id==='help')return 'Einrichtung, Bedienung, Sicherheit';
@@ -1276,7 +1327,7 @@ function bgRefresh(){try{const b=JSON.parse(Ofen.bgInfo());
  $('bgNotT').textContent=b.notif_ok?'Erlaubt – Warnungen kommen auch auf die Uhr.':'Nicht erlaubt – keine Warnungen.';$('bgNotB').hidden=b.notif_ok;
  $('ver').textContent='Version '+b.version}catch(e){}}
 window.onAppResume=()=>{bgRefresh();refresh()};
-window.goBack=()=>{if(!$('welcome').hidden){welcomeDone(false);return true}if(curTab==='set'){setBack();return true}if(curTab!=='ofen'){tab('ofen',-1);return true}return false};
+window.goBack=()=>{if(!$('wz').hidden){wzClose();return true}if(!$('welcome').hidden){welcomeDone(false);return true}if(curTab==='set'){setBack();return true}if(curTab!=='ofen'){tab('ofen',-1);return true}return false};
 
 /* Start */
 let t0='ofen';try{t0=localStorage.getItem('tab')||'ofen'}catch(e){}applyHm();tab(mainTabs().includes(t0)?t0:'ofen',0);

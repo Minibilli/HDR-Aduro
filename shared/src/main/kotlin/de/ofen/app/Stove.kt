@@ -904,6 +904,30 @@ object Stove {
         man.lastKeep = System.currentTimeMillis()
     }
 
+    /** Assistent „Ausgänge erkennen“: so lange läuft ein Ausgang beim Probieren */
+    const val PROBE_SEC = 10
+
+    /**
+     * Ausgang zum Erkennen kurz einschalten – auch unbenannt. Nur bei gestopptem, kaltem Ofen (auch das Gebläse),
+     * immer nur ein Ausgang gleichzeitig, fest [PROBE_SEC] Sekunden.
+     */
+    fun manualProbe(bit: Int) {
+        if (bit !in 0 until N_OUTPUTS) throw StoveError("Unbekannter Ausgang")
+        synchronized(manLock) {
+            if (man.wood) throw StoveError("Im Holzbetrieb geht das nicht.")
+            val now = readStatus()
+            val st = now.optString("state")
+            val smoke = now.optString("smoke_temp").toDoubleOrNull()
+            if (st in BURNING || st == "9") throw StoveError("Der Ofen läuft – zum Erkennen der Ausgänge muss er gestoppt und kalt sein.")
+            if (smoke == null) throw StoveError("Rauchgastemperatur unbekannt – Erkennen nur bei kaltem Ofen.")
+            if (smoke >= MAN_COLD_SMOKE) throw StoveError("Der Ofen ist noch heiß (Rauchgas %.0f °C). Erkennen erst unter %.0f °C.".format(smoke, MAN_COLD_SMOKE))
+            man.deadline.clear()   // immer nur einer – sonst weiß man nicht, wer was tut
+            man.deadline[bit] = System.currentTimeMillis() + PROBE_SEC * 1000L
+            applyMan()
+            man.error = ""
+        }
+    }
+
     fun manualSwitch(bit: Int, on: Boolean, minutes: Double?) {
         if (bit !in 0 until N_OUTPUTS) throw StoveError("Unbekannter Ausgang")
         val c = cfg()
