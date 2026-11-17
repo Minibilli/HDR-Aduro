@@ -373,6 +373,8 @@ object Stove {
                 set("misc.start", "1")
                 cancelEarly()
                 plat.alert(Alerts.EARLY, "Pellets starten wieder", "Holz abgebrannt (Rauchgas ${t.toInt()} °C)")
+            } else if (!c.optBoolean("early_restart") && t < VALVE_COLD_SMOKE) {
+                cancelEarly()   // Feuer aus, kein Neustart gewünscht -> nicht mehr „Holzbetrieb (App)“
             }
             info.put("stopped", early.stopped)
             return
@@ -392,14 +394,18 @@ object Stove {
     }
 
     // ------------------------------------------------------------------ Heizkörper im Ofenraum (Homematic IP)
-    // Heizt der Ofen, wird die Heizgruppe des Raums auf „manuell“ mit niedriger Solltemperatur gestellt
-    // (Ventile zu). Ist der Ofen aus und abgekühlt, kommt der vorherige Zustand zurück (meist der Wochenplan).
-    class Valve { var offSince = 0L; var lastTry = 0L }
+    // Brennt der Ofen sicher (Rauchgas 5 min über 100 °C), wird die Heizgruppe des Raums auf „manuell“ mit
+    // niedriger Solltemperatur gestellt (Ventile zu). Ist der Ofen aus und das Rauchgas auf Raumtemperatur
+    // abgekühlt, geht der Raum zurück an Homematic: vorheriger Zustand, meist der Wochenplan.
+    // Bewusst nach Rauchgas, nicht nach Ofen-Zustand: der kann nach dem Abbrennen noch „Holzbetrieb“ zeigen.
+    class Valve { var offSince = 0L; var lastTry = 0L; var hotSince = 0L }
     val valve = Valve()
     @Volatile var lastStatusAt = 0L
-    private val VALVE_HEAT = setOf("2", "4", "5", "6", "9", "11", "32")
-    private const val VALVE_OPEN_DELAY = 15 * 60_000L
-    private const val VALVE_HOT_SMOKE = 100.0
+    private const val VALVE_HOT_SMOKE = 100.0          // darüber brennt sicher ein Feuer
+    private const val VALVE_CLOSE_HOLD = 5 * 60_000L   // so lange muss es brennen, bevor die Heizkörper zugehen
+    private const val VALVE_COLD_MARGIN = 8.0          // „kalt“ = Rauchgas höchstens so viel über Raumtemperatur
+    private const val VALVE_COLD_SMOKE = 50.0          // … oder, ohne Raumtemperatur, unter diesem Wert
+    private const val VALVE_OPEN_HOLD = 5 * 60_000L    // so lange muss er kalt sein, bevor sie wieder aufgehen
     private const val VALVE_RETRY = 2 * 60_000L
 
     private fun valveNotify(title: String, text: String) {
@@ -450,30 +456,48 @@ object Stove {
         val sen = Hmip.sensor(id)
         info.put("label", sen?.optString("label") ?: closed?.optString("label") ?: "")
         if (sen == null || !id.startsWith("g:")) { info.put("msg", "Raum nicht gefunden"); return }
-        val smoke = s.optString("smoke_temp").toDoubleOrNull() ?: 0.0
-        val heating = s.optString("state") in VALVE_HEAT || early.stopped || man.wood || smoke >= VALVE_HOT_SMOKE
-        if (heating) {
+        val smoke = s.optString("smoke_temp").toDoubleOrNull()
+        if (smoke == null) { info.put("msg", "Rauchgastemperatur unbekannt – keine Änderung"); return }
+        val room = s.optString("room_temp").toDoubleOrNull()
+        val coldAt = room?.let { it + VALVE_COLD_MARGIN } ?: VALVE_COLD_SMOKE
+        val pellets = s.optString("state") in PELLET_RUN
+        val burning = smoke >= VALVE_HOT_SMOKE
+        val cold = !pellets && smoke <= coldAt
+        if (closed == null) {
             valve.offSince = 0
-            if (closed == null) {
-                if (now - valve.lastTry < VALVE_RETRY) { info.put("msg", "schließt gleich – letzter Versuch fehlgeschlagen"); return }
-                valve.lastTry = now
-                val temp = c.optDouble("hm_valve_temp", 5.0)
-                Hmip.closeValves(id, temp)
-                c.put("hm_valve_closed", JSONObject().put("id", id).put("label", sen.optString("label"))
-                    .put("mode", sen.optString("mode").ifBlank { "AUTOMATIC" })
-                    .put("set", sen.optDouble("set", Double.NaN).let { if (it.isNaN()) JSONObject.NULL else it }).put("since", now))
-                saveCfg(c)
-                valveNotify("Heizkörper zu", "${sen.optString("label")}: Ofen heizt – Heizkörper auf %.1f °C".format(temp))
-                info.put("closed", true).put("msg", "zu – Ofen heizt")
-            } else info.put("msg", "zu seit ${hhmm(closed.optLong("since"))} – Ofen heizt")
-        } else if (closed != null) {
-            if (valve.offSince == 0L) valve.offSince = now
-            val at = valve.offSince + VALVE_OPEN_DELAY
-            if (now >= at && now - valve.lastTry >= VALVE_RETRY) {
-                valve.lastTry = now
-                valveOpen(c, closed); info.put("closed", false).put("msg", "wieder auf – Ofen aus")
-            } else info.put("msg", "Ofen aus – Heizkörper öffnen um ${hhmm(maxOf(at, now))}")
-        } else info.put("msg", "auf – schließen, sobald der Ofen heizt")
+            if (!burning) {
+                valve.hotSince = 0
+                info.put("msg", "auf – schließen, sobald der Ofen sicher brennt (Rauchgas über ${VALVE_HOT_SMOKE.toInt()} °C)"); return
+            }
+            if (valve.hotSince == 0L) valve.hotSince = now
+            val at = valve.hotSince + VALVE_CLOSE_HOLD
+            if (now < at) { info.put("msg", "Ofen brennt – Heizkörper schließen um ${hhmm(at)}"); return }
+            if (now - valve.lastTry < VALVE_RETRY) { info.put("msg", "schließt gleich – letzter Versuch fehlgeschlagen"); return }
+            valve.lastTry = now
+            val temp = c.optDouble("hm_valve_temp", 5.0)
+            Hmip.closeValves(id, temp)
+            // Zustand VOR der Übernahme merken – genau dahin geht es später zurück
+            c.put("hm_valve_closed", JSONObject().put("id", id).put("label", sen.optString("label"))
+                .put("mode", sen.optString("mode").ifBlank { "AUTOMATIC" })
+                .put("set", sen.optDouble("set", Double.NaN).let { if (it.isNaN()) JSONObject.NULL else it }).put("since", now))
+            saveCfg(c)
+            valveNotify("Heizkörper zu", "${sen.optString("label")}: Ofen brennt – Heizkörper auf %.1f °C".format(temp))
+            info.put("closed", true).put("msg", "zu – Ofen heizt")
+            return
+        }
+        valve.hotSince = 0
+        if (!cold) {
+            valve.offSince = 0
+            info.put("msg", if (burning || pellets) "zu seit ${hhmm(closed.optLong("since"))} – Ofen heizt"
+                else "zu – Ofen kühlt ab (Rauchgas ${smoke.toInt()} °C), zurück an Homematic bei ${coldAt.toInt()} °C")
+            return
+        }
+        if (valve.offSince == 0L) valve.offSince = now
+        val at = valve.offSince + VALVE_OPEN_HOLD
+        if (now >= at && now - valve.lastTry >= VALVE_RETRY) {
+            valve.lastTry = now
+            valveOpen(c, closed); info.put("closed", false).put("msg", "wieder bei Homematic – Ofen kalt")
+        } else info.put("msg", "Ofen kalt – zurück an Homematic um ${hhmm(maxOf(at, now))}")
     }
 
     // ------------------------------------------------------------------ Raumsteuerung (Homematic IP)
