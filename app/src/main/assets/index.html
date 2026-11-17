@@ -192,16 +192,15 @@ body.hasbg .hero[data-mode=err],body.hasbg .hero[data-mode=off]{background:color
 .bgprev{height:120px;border-radius:16px;background:var(--soft) center/cover no-repeat;margin:4px 0 12px;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:13.5px}
 .quit{width:100%;margin:4px 0 14px;background:var(--card);color:var(--bad);box-shadow:var(--shadow)}.quit[hidden]{display:none}
 /* Countdown Gebläse (Handbetrieb) oben rechts in der Statuskarte */
-.fanbadge{position:absolute;top:12px;right:12px;width:82px;height:82px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
- background:color-mix(in srgb,#0b1020 30%,transparent);color:#fff;box-shadow:0 6px 18px rgba(15,181,166,.35)}
+/* Gebläse läuft: Leiste unter „Ofen an/aus“, gleich breit, Restzeit-Balken unten */
+.fanbadge{position:relative;width:132px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;
+ background:rgba(11,16,32,.55);color:#fff;box-shadow:0 3px 10px rgba(15,181,166,.35)}
 .fanbadge[hidden]{display:none}
-.fanbadge svg.ring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
-.fanbadge .rb{fill:none;stroke:rgba(255,255,255,.18);stroke-width:4}
-.fanbadge .rf{fill:none;stroke:url(#fanGrad);stroke-width:4.5;stroke-linecap:round;transition:stroke-dashoffset 1s linear}
-.fanbadge .in{position:relative;display:flex;flex-direction:column;align-items:center;line-height:1}
-.fanbadge .in svg{width:26px;height:26px;color:var(--fresh2);animation:spin 1.2s linear infinite}
-.fanbadge .in b{font-size:19px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}
-.fanbadge .in small{font-size:10.5px;font-weight:700;opacity:.8;margin-top:2px;letter-spacing:.02em}
+.fanbadge::after{content:'';position:absolute;left:0;bottom:0;height:3px;width:var(--p,100%);background:linear-gradient(90deg,#22c7e8,#0fb5a6);transition:width 1s linear}
+.fanbadge .in{position:relative;display:flex;align-items:center;gap:7px;line-height:1}
+.fanbadge .in svg{width:18px;height:18px;color:var(--fresh2);animation:spin 1.2s linear infinite}
+.fanbadge .in b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.fanbadge .in small{font-size:12px;font-weight:700;opacity:.85}
 /* Pellet-Füllstand */
 .hop{background:var(--card);border-radius:20px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);cursor:pointer}
 .hop[hidden],#hopPanel[hidden]{display:none}
@@ -263,7 +262,6 @@ body.hasbg .fnPill,body.hasbg .topbar .net{background:color-mix(in srgb,var(--ca
 .heroR .pbtn.act{background:#0f9f76;color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.9),0 3px 10px rgba(0,0,0,.15)}
 .heroR .pbtn.offb.act{background:#e11d48}
 .heroR .pbtn svg{width:18px;height:18px}.heroR .pbtn.stop{color:#e11d48}.heroR .pbtn.off{color:#475569}.heroR .pbtn[hidden]{display:none}.heroR .pbtn:disabled{opacity:.5}
-.heroR .fanbadge{position:relative;top:auto;right:auto;width:64px;height:64px}.heroR .fanbadge .in svg{width:20px;height:20px}.heroR .fanbadge .in b{font-size:15px}
 .hero .sub,.hero .big{padding-right:118px}.hero:has(#fanBadge:not([hidden])) .blabel{padding-right:80px}
 .duo{display:flex;gap:12px;align-items:stretch}.duo>div{flex:1;min-width:0;display:flex;flex-direction:column}.duo>div[hidden]{display:none}
 .duo.two .seg{flex-direction:column;flex:1}.duo.two .seg button{flex:1;padding:10px 6px;font-size:14px}.duo .seg.ctl{margin-top:0}.apRow span{font-size:12.5px}
@@ -322,8 +320,6 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
       <button class="pbtn" id="powerBtn" onclick="powerToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/></svg><span id="powerT">Ofen an</span></button>
       <button class="pbtn offb" id="haltBtn" onclick="haltNow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/></svg><span>Ofen aus</span></button>
     <div class="fanbadge" id="fanBadge" hidden onclick="tab('fan')" title="Gebläse läuft von Hand">
-      <svg class="ring" viewBox="0 0 100 100"><defs><linearGradient id="fanGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22c7e8"/><stop offset="1" stop-color="#0fb5a6"/></linearGradient></defs>
-        <circle class="rb" cx="50" cy="50" r="45"/><circle class="rf" id="fanArc" cx="50" cy="50" r="45" stroke-dasharray="282.7" stroke-dashoffset="0"/></svg>
       <div class="in"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm.9-1.9c.5-2.6 2.4-6.1 5.2-5 2.6 1 1.4 4.7-2.8 6.1-.9.3-1.6-.2-2.4-1.1zm1.9 3.8c2.6.5 6.1 2.4 5 5.2-1 2.6-4.7 1.4-6.1-2.8-.3-.9.2-1.6 1.1-2.4zm-3.7 1.9c-.5 2.6-2.4 6.1-5.2 5-2.6-1-1.4-4.7 2.8-6.1.9-.3 1.6.2 2.4 1.1zM9.2 11.1C6.6 10.6 3.1 8.7 4.2 5.9c1-2.6 4.7-1.4 6.1 2.8.3.9-.2 1.6-1.1 2.4z"/></svg>
         <b id="fanBadgeT">–</b><small>Gebläse</small></div>
     </div>
@@ -987,10 +983,10 @@ let fanTotal=0;
 function fanBadge(){const fb=man.fresh_air_bit,k=fb==null?null:String(fb),on=k!=null&&k in (man.running||{});const b=$('fanBadge');
  if(!on){b.hidden=true;fanTotal=0;return}
  b.hidden=false;const r=man.running[k];
- if(r==null){$('fanBadgeT').textContent='∞';$('fanArc').style.strokeDashoffset=0;fanTotal=0;return}
+ if(r==null){$('fanBadgeT').textContent='∞';b.style.setProperty('--p','100%');fanTotal=0;return}
  if(!fanTotal||r>fanTotal)fanTotal=r;
  $('fanBadgeT').textContent=Math.floor(r/60)+':'+String(r%60).padStart(2,'0');
- $('fanArc').style.strokeDashoffset=(282.7*(1-r/Math.max(1,fanTotal))).toFixed(1)}
+ b.style.setProperty('--p',(100*r/Math.max(1,fanTotal)).toFixed(1)+'%')}
 async function manRefresh(){if(!APPON)return;try{man=await api('manual');fanBadge();
  for(let o=1;o<=8;o++){const i=$('nm'+o);if(document.activeElement!==i)i.value=man.names[o]||''}
  renderOuts();manVisible();if(curTab==='parts'&&S)renderParts(S);
