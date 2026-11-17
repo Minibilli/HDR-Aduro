@@ -179,6 +179,7 @@ body.inset .dots{display:none}
 .pt.half .pi{background:color-mix(in srgb,var(--fire) 16%,transparent);color:var(--fire)}.pt.half .ps{color:var(--fire)}
 .mrow{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:14.5px}.mrow:last-child{border-bottom:0}
 .mrow b{font-variant-numeric:tabular-nums}
+#recTail{max-height:260px;overflow:auto;white-space:pre-wrap;background:color-mix(in srgb,var(--bg) 60%,transparent);border-radius:12px;padding:10px}
 .raw{font:12.5px/1.5 ui-monospace,monospace;overflow-wrap:anywhere;color:var(--mute);margin-top:10px}
 .seg.ctl{margin-top:14px}.seg.ctl[hidden]{display:none}.seg.ctl button{padding:9px 6px;font-size:13.5px}
 #bgSl[hidden],#vlBox[hidden],#valveHome[hidden],#vpnHome[hidden]{display:none}
@@ -400,6 +401,12 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
 <!-- ============ Tab: Bauteile ============ -->
 <section id="t-parts" hidden>
   <div class="pgrid" id="partGrid"></div>
+  <div class="card" id="recCard"><h2>Zündung aufzeichnen</h2>
+    <p class="mute" style="margin-top:0">Schreibt alle 2 Sekunden mit, was der Ofen meldet – Zustand, Lichtsensor, Stromaufnahme, Temperaturen. So lässt sich der Ablauf einer Zündung genau nachvollziehen. Die App schaltet dabei nichts. Erst starten, dann den Ofen einschalten.</p>
+    <div class="okbox" id="recT" hidden></div>
+    <pre class="raw" id="recTail" hidden></pre>
+    <div class="row" style="margin-top:10px"><button class="fire" id="recBtn" onclick="recToggle()">Aufzeichnung starten</button><button id="recShare" hidden onclick="recShare()">Teilen</button></div>
+  </div>
   <div class="card"><h2>Messwerte</h2><div id="partVals"></div></div>
   <div class="card xp"><details><summary>Alle Rohwerte vom Ofen</summary>
     <p class="mute">Alles, was der Ofen gerade meldet – Betriebsdaten und erweiterte Daten. Hilft herauszufinden, welche Werte dein Ofen zusätzlich liefert.</p>
@@ -1316,7 +1323,21 @@ function renderParts(s){const st=String(s.state||''),raw=s.raw||{},sub=String(ra
  const V=[['Zustand',s.state_text+(s.substate_text&&s.substate_text!=='normal'?' · '+s.substate_text:'')],['Rauchgas',num(s.smoke_temp)+' °C'],['Fallschacht',num(s.shaft_temp)+' °C'],
   ['Leistung',(isNaN(pp)?'–':pp+' %')+' · '+num(s.power_kw,1)+' kW'],['Sauerstoff',num(s.oxygen,1)+' %'],['Stromaufnahme',isNaN(ma)?'–':ma+' mA'],['Lichtsensor',raw.photo_level??'–']];
  $('partVals').innerHTML=V.map(v=>`<div class="mrow"><span>${v[0]}</span><b>${esc(v[1])}</b></div>`).join('');
+ if(curTab==='parts'&&!(REC&&REC.active))recRefresh();
  if(curTab==='parts'&&Date.now()-advAt>9000){advAt=Date.now();api('advanced').then(a=>{ADV=a;showRaw(s)}).catch(()=>{ADV={};showRaw(s)})}else showRaw(s)}
+/* Zündprotokoll */
+let REC=null,recT=null;
+async function recRefresh(){try{REC=await api('rec')}catch(e){return}
+ const a=REC.active,n=REC.lines||0;$('recBtn').textContent=a?'Aufzeichnung beenden':(n?'Neu aufzeichnen':'Aufzeichnung starten');$('recBtn').classList.toggle('fire',!a);
+ $('recShare').hidden=!n;$('recT').hidden=!n&&!a;$('recTail').hidden=!n;
+ const min=REC.started?Math.floor((Date.now()-REC.started)/60000):0;
+ $('recT').textContent=a?'● Läuft seit '+min+' min · '+n+' Einträge – jetzt den Ofen starten':'Aufzeichnung beendet'+(REC.reason?' ('+REC.reason+')':'')+' · '+n+' Einträge';
+ $('recTail').textContent=REC.tail||'';$('recTail').scrollTop=1e9;
+ clearTimeout(recT);if(a&&curTab==='parts')recT=setTimeout(recRefresh,2000)}
+async function recToggle(){try{if(REC&&REC.active)await api('rec/stop',{});else{if(REC&&REC.lines&&!confirm('Neue Aufzeichnung starten? Die bisherige wird überschrieben.'))return;await api('rec/start',{});toast('Aufzeichnung läuft – jetzt den Ofen starten')}}catch(e){toast(e.message,true)}recRefresh()}
+async function recShare(){let t='';try{t=(await api('rec/text')).text}catch(e){toast(e.message,true);return}
+ try{Ofen.shareText('HDR Aduro Zündprotokoll',t);return}catch(e){}
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/plain'}));a.download='zuendprotokoll.txt';a.click()}
 function showRaw(s){const r=s.raw||{},a=ADV||{};const line=(o)=>Object.keys(o).sort().map(k=>esc(k)+' = '+esc(o[k])).join('<br>');
  $('partRaw').innerHTML='<b>Betriebsdaten</b><br>'+line(r)+(Object.keys(a).length?'<br><br><b>Erweiterte Daten</b><br>'+line(a):'')}
 

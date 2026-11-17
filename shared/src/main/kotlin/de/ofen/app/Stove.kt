@@ -32,6 +32,8 @@ object Stove {
         "35" to "Lüfter ohne Stromaufnahme",
     )
     private val SUBSTATE_TEXT = mapOf("0" to "normal", "1" to "warten", "2" to "Startbefüllung", "4" to "Zünder an", "6" to "Reinigung")
+    fun stateName(v: String) = STATE_TEXT[v] ?: "?"
+    fun substateName(v: String) = SUBSTATE_TEXT[v] ?: "?"
     private val MODE_TEXT = mapOf("0" to "Heizstufe", "1" to "Raumtemperatur", "2" to "Timer")
     private val ALARM_TEXT = mapOf("0" to "OK", "1" to "vom Nutzer gestoppt", "2" to "unerwartet gestoppt")
     val BURNING = setOf("2", "4", "5", "6", "9", "11", "32")

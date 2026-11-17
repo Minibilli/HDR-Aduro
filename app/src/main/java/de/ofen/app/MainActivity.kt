@@ -210,6 +210,16 @@ class MainActivity : Activity() {
             }
         }
 
+        /** Text (z. B. Zündprotokoll) über Android teilen: Mail, Messenger, Drive … */
+        @JavascriptInterface
+        fun shareText(title: String, text: String) {
+            runOnUiThread {
+                val send = Intent(Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(Intent.EXTRA_SUBJECT, title).putExtra(Intent.EXTRA_TEXT, text)
+                startActivity(Intent.createChooser(send, title))
+            }
+        }
+
         /** Hat das Handy eine Taschenlampe? */
         @JavascriptInterface
         fun hasTorch(): Boolean = torchCam() != null

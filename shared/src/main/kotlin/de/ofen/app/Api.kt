@@ -60,6 +60,8 @@ object Api {
                 .put("auger", Stove.getKv(Nbe.FN_SETTINGS, "hopper.auger_capacity")["auger_capacity"] ?: ""))
         }
         "advanced" -> ok(JSONObject(Stove.getKv(Nbe.FN_ADVANCED, "*")))
+        "rec" -> ok(Recorder.info())
+        "rec/text" -> ok(JSONObject().put("text", Recorder.text()))
         "hm" -> {
             val c = Stove.cfg()
             val show = c.optJSONArray("hm_show") ?: org.json.JSONArray()
@@ -89,6 +91,9 @@ object Api {
             "control/release" -> return ok(Control.releaseLocal())
             "control/force" -> return ok(Control.forceLocal())
             "app/on" -> { Stove.appOn(); return ok() }
+            // Zündprotokoll: nur lesen, darf jedes Gerät
+            "rec/start" -> return ok(Recorder.start())
+            "rec/stop" -> return ok(Recorder.stop())
         }
         if (p.startsWith("link/")) return ok(Control.linkPost(p, b))
         if (!Control.mayConfigure()) {
