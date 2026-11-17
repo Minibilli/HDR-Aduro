@@ -6,6 +6,8 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -33,6 +35,26 @@ import java.util.concurrent.Executors
 class MainActivity : Activity() {
     private lateinit var web: WebView
 
+    // ------------------------------------------------------------------ Taschenlampe
+    @Volatile private var torchOn = false
+    private var torchId: String? = null
+    private val torchCb = object : CameraManager.TorchCallback() {
+        override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
+            if (cameraId != torchId) return
+            torchOn = enabled   // auch wenn sie über die Schnelleinstellungen geschaltet wird
+            if (::web.isInitialized) web.post { web.evaluateJavascript("window.onTorch&&onTorch($enabled)", null) }
+        }
+    }
+
+    private fun torchCam(): String? {
+        torchId?.let { return it }
+        return try {
+            val cm = getSystemService(CameraManager::class.java)
+            cm.cameraIdList.firstOrNull { cm.getCameraCharacteristics(it).get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true }
+                ?.also { torchId = it }
+        } catch (e: Exception) { null }
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,6 +80,7 @@ class MainActivity : Activity() {
             }
         }
         web.addJavascriptInterface(Bridge(), "Ofen")
+        try { if (torchCam() != null) getSystemService(CameraManager::class.java).registerTorchCallback(torchCb, null) } catch (e: Exception) { }
         web.setBackgroundColor(0)
         setContentView(web)
         web.loadUrl("file:///android_asset/index.html")
@@ -185,6 +208,22 @@ class MainActivity : Activity() {
                 } catch (e: Exception) { }
                 false
             }
+        }
+
+        /** Hat das Handy eine Taschenlampe? */
+        @JavascriptInterface
+        fun hasTorch(): Boolean = torchCam() != null
+
+        /** Taschenlampe umschalten – "on", "off" oder "" (keine Lampe / Kamera belegt) */
+        @JavascriptInterface
+        fun torch(): String {
+            val id = torchCam() ?: return ""
+            return try {
+                val on = !torchOn
+                getSystemService(CameraManager::class.java).setTorchMode(id, on)
+                torchOn = on
+                if (on) "on" else "off"
+            } catch (e: Exception) { "" }
         }
 
         @JavascriptInterface

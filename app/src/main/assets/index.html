@@ -242,7 +242,8 @@ body.noxp .xp{display:none!important}
 .hints{display:flex;gap:8px;margin:-4px 0 6px}.hint{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;font-weight:700;padding:7px 11px;border-radius:999px;background:color-mix(in srgb,var(--fire) 16%,var(--card));cursor:pointer}
 .hint[hidden]{display:none}.hint.cold{background:color-mix(in srgb,#3b82f6 22%,var(--card));flex:0 0 auto}
 #upd{display:none}
-header .gear{margin-left:auto}header .brand{font-size:23px}header .brand svg{width:30px;height:30px}
+header .gear{margin-left:auto}header .gear.torch:not([hidden])+.gear{margin-left:10px}.gear[hidden]{display:none}
+.gear.torch.lit{background:#fde047;color:#78350f;box-shadow:0 0 0 3px rgba(253,224,71,.45),0 0 18px rgba(253,224,71,.6)}header .brand{font-size:23px}header .brand svg{width:30px;height:30px}
 .topbar{display:flex;gap:10px;margin:0 0 12px}.topbar .net{margin:0;flex:1;justify-content:center;font-size:14px;padding:10px 12px}
 .fnPill{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;margin:0;padding:5px 8px 5px 14px;border-radius:999px;background:var(--card);box-shadow:var(--shadow);font-size:14px;font-weight:700;color:var(--ink);cursor:pointer}
 .fnPill .sw{position:relative;display:inline-block;width:46px;height:28px;flex:0 0 46px}.fnPill .sw i::after{width:22px;height:22px}.fnPill .sw input:checked+i::after{transform:translateX(18px)}
@@ -293,6 +294,7 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
 
 <header>
   <div class="brand"><svg viewBox="0 0 24 24"><defs><linearGradient id="fl" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff4f6d"/><stop offset="1" stop-color="#ffb13d"/></linearGradient></defs><path fill="url(#fl)" d="M12 2c1 3.5 5.5 5.6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.6 1.3-4.3 2.6-5.6.3 1.7 1 2.8 2.2 3.3C10.9 7.7 11.4 4.6 12 2z"/></svg>HDR Aduro</div>
+  <button class="gear torch" id="torchBtn" hidden onclick="torchToggle()" aria-label="Taschenlampe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10v4l-2.5 4v9a1 1 0 0 1-1 1h-3a1 1 0 0 1-1-1v-9L7 7z"/><path d="M7 7h10"/><path d="M12 13v2"/></svg></button>
   <button class="gear" id="gearBtn" onclick="tab(curTab==='set'?lastMain:'set')" aria-label="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
 </header>
 <div class="topbar" id="topbar">
@@ -472,6 +474,7 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
     <details id="h-home"><summary>Startseite</summary><div>
       <ul><li><b>Farbe der Karte</b>: orange-rot = Pellets brennen, gelb = Holzbetrieb, grau gestreift = ausgeschaltet.</li>
       <li><b>Ofen an / Ofen aus</b>: der gefüllte Knopf zeigt den aktuellen Zustand.</li>
+      <li><b>Taschenlampe</b> oben neben dem Zahnrad: schaltet die Lampe des Handys ein und aus – praktisch beim Blick in Brennraum oder Pelletbehälter.</li>
       <li><b>Kacheln antippen</b> (mit Pfeil ›): „Ziel“ bzw. „Raum“ öffnet die Zieltemperatur, „Warnung unter“ die Holz-Warnung.</li>
       <li><b>Pellets</b>-Balken antippen: nach dem Nachfüllen „Voll“ oder die Menge eintragen. Der Ofen zählt den Verbrauch danach selbst.</li>
       <li><b>Heizstufe</b> Niedrig / Mittel / Hoch und darunter die <b>Raum-Zieltemperatur</b> des Ofens mit – und +. Im Holzbetrieb ist die Pelletsteuerung ausgeblendet („im Standby“), weil dann das Holz heizt.</li>
@@ -848,7 +851,7 @@ function render(s){
   $('m1').textContent=num(s.target_temp)+' °C';$('m1l').textContent='Ziel';$('m2').textContent=num(s.smoke_temp)+' °C';$('m2l').textContent='Rauchgas';$('gauge').hidden=true}
  /* Ofen an / Ofen aus: beide gleich groß, der aktuelle Zustand ist invertiert */
  const pb=$('powerBtn'),hb=$('haltBtn');pb.disabled=hb.disabled=false;$('powerT').textContent='Ofen an';
- pb.classList.toggle('act',!hal&&running);hb.classList.toggle('act',hal);
+ pb.classList.toggle('act',!hal&&running);hb.classList.toggle('act',hal||(!running&&['14','23'].includes(s.state)));
  /* Holzbetrieb: Pelletsteuerung ausblenden, nur kurzer Hinweis */
  $('pelletCard').hidden=w;$('pelletStandby').hidden=!w;
  placeFan();
@@ -1113,6 +1116,11 @@ function quitApp(){
   (run?'\n\nDer Ofen läuft gerade und wird NICHT gestoppt – er regelt dann nur noch nach seinem eigenen Fühler. Zum Stoppen vorher „Ausschalten“.':'')))return false;
  toast('Funktionen werden beendet …');try{Ofen.quitApp()}catch(e){toast('Beenden nicht möglich',true)}return true}
 $('fnOn').addEventListener('change',()=>{if($('fnOn').checked)return;if(!quitApp())$('fnOn').checked=true});
+/* Taschenlampe (nur in der Handy-App) */
+function torchToggle(){let r='';try{r=Ofen.torch()}catch(e){}
+ if(!r){toast('Taschenlampe nicht verfügbar',true);return}onTorch(r==='on')}
+window.onTorch=on=>$('torchBtn').classList.toggle('lit',!!on);
+try{if(!WEB&&Ofen.hasTorch())$('torchBtn').hidden=false}catch(e){}
 /* Anleitung */
 const HELP_FOR={conn:'h-start',link:'h-link',pellet:'h-pellet',hm:'h-hm',xpm:'h-xpm',outs:'h-xpm',expert:'h-xpm',bg:'h-bg',look:'h-home'};
 function helpFor(page){help(HELP_FOR[page]||'h-start')}
