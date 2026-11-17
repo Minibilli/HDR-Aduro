@@ -109,6 +109,7 @@ object Control {
     }
 
     fun passiveMsg(): String = when {
+        Recorder.observing() -> "pausiert – Zündprotokoll, die App beobachtet nur"
         ctl().optString("kind") == "none" -> "pausiert – Steuerung ist freigegeben"
         !raspi && isHolder() && !active() -> "pausiert – Raspi nicht erreichbar"
         raspi && isHolder() && !active() -> "Startschutz – noch ${guardLeft()} s"

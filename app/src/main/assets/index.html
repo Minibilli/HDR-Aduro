@@ -403,6 +403,7 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
   <div class="pgrid" id="partGrid"></div>
   <div class="card" id="recCard"><h2>Zündung aufzeichnen</h2>
     <p class="mute" style="margin-top:0">Schreibt alle 2 Sekunden mit, was der Ofen meldet – Zustand, Lichtsensor, Stromaufnahme, Temperaturen. So lässt sich der Ablauf einer Zündung genau nachvollziehen. Die App schaltet dabei nichts. Erst starten, dann den Ofen einschalten.</p>
+    <div class="tgl"><div><b>Nur beobachten</b><span class="mute">Während der Aufzeichnung schaltet die App nichts: Auto-Heizstufe, Raumsteuerung, Pellets früher stoppen, Heizkörper und Gebläse von Hand sind pausiert. So läuft der Ofen genau nach seiner eigenen Automatik.</span></div><label class="sw"><input type="checkbox" id="recObs" checked><i></i></label></div>
     <div class="okbox" id="recT" hidden></div>
     <pre class="raw" id="recTail" hidden></pre>
     <div class="row" style="margin-top:10px"><button class="fire" id="recBtn" onclick="recToggle()">Aufzeichnung starten</button><button id="recShare" hidden onclick="recShare()">Teilen</button></div>
@@ -1331,10 +1332,11 @@ async function recRefresh(){try{REC=await api('rec')}catch(e){return}
  const a=REC.active,n=REC.lines||0;$('recBtn').textContent=a?'Aufzeichnung beenden':(n?'Neu aufzeichnen':'Aufzeichnung starten');$('recBtn').classList.toggle('fire',!a);
  $('recShare').hidden=!n;$('recT').hidden=!n&&!a;$('recTail').hidden=!n;
  const min=REC.started?Math.floor((Date.now()-REC.started)/60000):0;
- $('recT').textContent=a?'● Läuft seit '+min+' min · '+n+' Einträge – jetzt den Ofen starten':'Aufzeichnung beendet'+(REC.reason?' ('+REC.reason+')':'')+' · '+n+' Einträge';
+ $('recObs').disabled=a;if(a)$('recObs').checked=!!REC.observe;
+ $('recT').textContent=a?'● Läuft seit '+min+' min · '+n+' Einträge'+(REC.observe?' · App greift nicht ein':''):'Aufzeichnung beendet'+(REC.reason?' ('+REC.reason+')':'')+' · '+n+' Einträge';
  $('recTail').textContent=REC.tail||'';$('recTail').scrollTop=1e9;
  clearTimeout(recT);if(a&&curTab==='parts')recT=setTimeout(recRefresh,2000)}
-async function recToggle(){try{if(REC&&REC.active)await api('rec/stop',{});else{if(REC&&REC.lines&&!confirm('Neue Aufzeichnung starten? Die bisherige wird überschrieben.'))return;await api('rec/start',{});toast('Aufzeichnung läuft – jetzt den Ofen starten')}}catch(e){toast(e.message,true)}recRefresh()}
+async function recToggle(){try{if(REC&&REC.active)await api('rec/stop',{});else{if(REC&&REC.lines&&!confirm('Neue Aufzeichnung starten? Die bisherige wird überschrieben.'))return;await api('rec/start',{observe:$('recObs').checked});toast('Aufzeichnung läuft – jetzt den Ofen starten')}}catch(e){toast(e.message,true)}recRefresh()}
 async function recShare(){let t='';try{t=(await api('rec/text')).text}catch(e){toast(e.message,true);return}
  try{Ofen.shareText('HDR Aduro Zündprotokoll',t);return}catch(e){}
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/plain'}));a.download='zuendprotokoll.txt';a.click()}

@@ -20,6 +20,9 @@ object Recorder {
     private val GROUPS = listOf("ignition", "regulation", "fan", "auger", "oxygen", "misc", "manual")
 
     @Volatile var active = false; private set
+    /** „Nur beobachten“: während der Aufzeichnung schaltet die App nichts (Automatiken pausiert, kein Handbetrieb) */
+    @Volatile var observe = false; private set
+    fun observing() = active && observe
     @Volatile var started = 0L; private set
     @Volatile private var runSince = 0L
     @Volatile private var stopReason = ""
@@ -30,14 +33,17 @@ object Recorder {
     private fun ts(t: Long) = String.format(Locale.ROOT, "%02d:%02d", (t - started) / 60_000, ((t - started) / 1000) % 60)
     private fun add(l: String) = synchronized(lines) { if (lines.size < MAX_LINES) lines.add(l) }
 
-    fun start(): JSONObject {
+    fun start(observeOnly: Boolean = true): JSONObject {
         if (active) return info()
+        observe = observeOnly
+        if (observeOnly && (Stove.man.active || Stove.man.deadline.isNotEmpty())) try { Stove.manualAllOff() } catch (e: Exception) { }
         synchronized(lines) { lines.clear() }
         started = System.currentTimeMillis(); runSince = 0; stopReason = ""
         val h = StringBuilder()
         h.append("HDR Aduro – Zündprotokoll\n")
         h.append("Beginn: ").append(SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.GERMANY).format(Date(started))).append('\n')
         h.append("Gerät: ").append(Stove.platform.deviceName).append(" (").append(Stove.platform.kind).append(")\n")
+        h.append("Modus: ").append(if (observeOnly) "nur beobachten – App-Automatiken pausiert, kein Handbetrieb" else "App-Automatiken laufen weiter").append('\n')
         // Einstellungen des Ofens einmal festhalten
         for (g in GROUPS) {
             val kv = try { Stove.getKv(Nbe.FN_SETTINGS, "$g.*") } catch (e: Exception) { emptyMap() }
@@ -101,6 +107,6 @@ object Recorder {
     fun info(): JSONObject {
         val tail = synchronized(lines) { lines.takeLast(40).joinToString("\n") }
         return JSONObject().put("active", active).put("started", started).put("lines", synchronized(lines) { lines.size })
-            .put("tail", tail).put("reason", stopReason)
+            .put("tail", tail).put("reason", stopReason).put("observe", observe)
     }
 }

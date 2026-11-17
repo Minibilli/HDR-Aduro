@@ -92,7 +92,7 @@ object Api {
             "control/force" -> return ok(Control.forceLocal())
             "app/on" -> { Stove.appOn(); return ok() }
             // Zündprotokoll: nur lesen, darf jedes Gerät
-            "rec/start" -> return ok(Recorder.start())
+            "rec/start" -> return ok(Recorder.start(b.optBoolean("observe", true)))
             "rec/stop" -> return ok(Recorder.stop())
         }
         if (p.startsWith("link/")) return ok(Control.linkPost(p, b))

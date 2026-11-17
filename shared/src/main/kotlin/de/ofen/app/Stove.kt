@@ -207,7 +207,7 @@ object Stove {
         if (!appRunning()) throw StoveError("Funktionen sind aus – auf der Hauptseite „Funktionen starten“.")
         val op = getKv(Nbe.FN_OPERATING, "*")
         if (op.isEmpty()) throw StoveError("Unerwartete Antwort vom Ofen")
-        if (Control.active()) manualStuckCheck()
+        if (Control.active() && !Recorder.observing()) manualStuckCheck()
         val s = JSONObject()
         s.put("fixed_power", runCatching { getKv(Nbe.FN_SETTINGS, "regulation.fixed_power")["fixed_power"] }.getOrNull() ?: JSONObject.NULL)
         s.put("target_temp", runCatching { getKv(Nbe.FN_SETTINGS, "boiler.temp")["temp"] }.getOrNull() ?: op["boiler_ref"] ?: JSONObject.NULL)
@@ -231,7 +231,8 @@ object Stove {
         s.put("raw", JSONObject(op))
         routeInfo().let { s.put("route", it.optString("route")).put("home_wifi", it.optBoolean("home_wifi")) }
         // Automatiken schalten nur auf dem Gerät, das gerade die Steuerung hat (Raspi oder Handy)
-        val act = Control.active()
+        // „Nur beobachten“ beim Zündprotokoll: die App greift nicht ein
+        val act = Control.active() && !Recorder.observing()
         if (act) try { externalStopCheck(prevState, st) } catch (e: Exception) { }
         haltCheck(s, act)
         try { hopperCheck(s) } catch (e: Exception) { }
@@ -959,6 +960,7 @@ object Stove {
      */
     fun manualProbe(bit: Int) {
         if (bit !in 0 until N_OUTPUTS) throw StoveError("Unbekannter Ausgang")
+        if (Recorder.observing()) throw StoveError("Während des Zündprotokolls (nur beobachten) schaltet die App nichts.")
         synchronized(manLock) {
             if (man.wood) throw StoveError("Im Holzbetrieb geht das nicht.")
             val now = readStatus()
@@ -975,6 +977,7 @@ object Stove {
     }
 
     fun manualSwitch(bit: Int, on: Boolean, minutes: Double?) {
+        if (on && Recorder.observing()) throw StoveError("Während des Zündprotokolls (nur beobachten) schaltet die App nichts.")
         if (bit !in 0 until N_OUTPUTS) throw StoveError("Unbekannter Ausgang")
         val c = cfg()
         val fan = if (c.has("fresh_air_bit")) c.optInt("fresh_air_bit") else -1
