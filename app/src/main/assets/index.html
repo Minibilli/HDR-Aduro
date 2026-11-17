@@ -857,7 +857,7 @@ function render(s){
  const hal=!!s.halted;
  $('hero').dataset.mode=hal?'halt':al?'alarm':w?(s.wood_warn?'low':'wood'):(running?'run':'off');
  $('state').textContent=hal?'Ausgeschaltet'+(s.halted_ext?' (am Ofen)':'')+(running?' · Ofen stoppt …':al?' · '+s.state_text:''):(s.early&&s.early.stopped)?'Holzbetrieb (App)':s.state_text;
- $('substate').textContent=hal?(s.halted_ext?'Am Ofen gestoppt – alle Automatiken der App sind pausiert, bis du „Starten“ drückst oder den Ofen am Gerät startest.':'Alle Automatiken der App sind pausiert – nichts startet von selbst, bis du „Starten“ drückst.')+(w?' Holz brennt noch.':''):al?al:(s.early&&s.early.msg)?s.early.msg:(s.substate_text&&s.substate_text!=='normal'?s.substate_text:'');
+ $('substate').textContent=hal?(s.halted_ext?'Am Ofen gestoppt – alle Automatiken der App sind pausiert, bis du „Starten“ drückst oder den Ofen am Gerät startest.':'Alle Automatiken der App sind pausiert – nichts startet von selbst, bis du „Starten“ drückst.')+(w?' Holz brennt noch.':''):al?al:(s.early&&s.early.msg)?s.early.msg:s.state==='0'?(+s.smoke_temp>=100?'Ofen ist an und wartet, bis das Rauchgas unter 100 °C fällt – dann startet er die Pellets selbst.':'Ofen ist an und wartet auf den Start.'):(s.substate_text&&s.substate_text!=='normal'?s.substate_text:'');
  if(w){$('bigV').textContent=num(s.smoke_temp);$('bigL').textContent='Rauchgas · Holzbetrieb';
   $('m1').textContent=num(s.room_temp,1)+' °C';$('m1l').textContent='Raum';$('m2').textContent=num(s.wood_min)+' °C';$('m2l').textContent='Warnung unter';
   $('gauge').hidden=false;$('gFill').style.width=Math.max(3,Math.min(100,(+s.smoke_temp||0)/(2*(+s.wood_min||150))*100))+'%';
@@ -869,7 +869,7 @@ function render(s){
   $('m1').textContent=num(s.target_temp)+' °C';$('m1l').textContent='Ziel';$('m2').textContent=num(s.smoke_temp)+' °C';$('m2l').textContent='Rauchgas';$('gauge').hidden=true}
  /* Ofen an / Ofen aus: beide gleich groß, der aktuelle Zustand ist invertiert */
  const pb=$('powerBtn'),hb=$('haltBtn');pb.disabled=hb.disabled=false;$('powerT').textContent='Ofen an';
- pb.classList.toggle('act',!hal&&running);hb.classList.toggle('act',hal||(!running&&['14','23'].includes(s.state)));
+ pb.classList.toggle('act',!hal&&(running||s.state==='0'));hb.classList.toggle('act',hal||(!running&&['14','23'].includes(s.state)));
  /* Holzbetrieb: Pelletsteuerung ausblenden, nur kurzer Hinweis */
  $('pelletCard').hidden=w;$('pelletStandby').hidden=!w;
  placeFan();
@@ -1001,7 +1001,7 @@ async function manRefresh(){if(!APPON)return;try{man=await api('manual');fanBadg
  for(let o=1;o<=8;o++){const i=$('nm'+o);if(document.activeElement!==i)i.value=man.names[o]||''}
  renderOuts();manVisible();if(curTab==='parts'&&S)renderParts(S);
  const smk=S?parseFloat(S.smoke_temp):NaN;
- $('manInfo').textContent=man.error?(/^Ofen heiß/.test(man.error)?man.error:'Verbindungsproblem: '+man.error):(man.wood?'Holzbetrieb: nur das Frischluftgebläse ist freigegeben.':(!isNaN(smk)&&smk>=60?'Ofen ist noch heiß (Rauchgas '+Math.round(smk)+' °C): Schnecke, Zünder usw. erst unter 60 °C – nur das Frischluftgebläse geht.':''));
+ $('manInfo').textContent=man.error?(/^(Ofen heiß|Pellets starten|Ofen startet)/.test(man.error)?man.error:'Verbindungsproblem: '+man.error):(man.wood?'Holzbetrieb: nur das Frischluftgebläse ist freigegeben.':(!isNaN(smk)&&smk>=60?'Ofen ist noch heiß (Rauchgas '+Math.round(smk)+' °C): Schnecke, Zünder usw. erst unter 60 °C – nur das Frischluftgebläse geht.':''));
  const fb=man.fresh_air_bit,has=fb!=null;$('fanCtl').hidden=!has;$('fanHint').hidden=has;
  const on=has&&String(fb) in man.running,s=has?man.running[String(fb)]:null;
  $('fanIco').classList.toggle('on',on);$('fanSub').textContent=on?(s==null?'Läuft bis Stopp':'Läuft · schaltet selbst ab'):'Aus';$('fanT').textContent=on&&s!=null?fmt(s):'';

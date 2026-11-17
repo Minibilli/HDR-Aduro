@@ -17,7 +17,7 @@ object Recorder {
     private const val AFTER_RUN_MS = 10 * 60_000L    // 10 min nach Erreichen von Normalbetrieb Schluss
     private const val MAX_LINES = 3000
     /** Einstellungsgruppen, die zum Verständnis der Zündung beitragen */
-    private val GROUPS = listOf("ignition", "regulation", "fan", "auger", "oxygen", "misc")
+    private val GROUPS = listOf("ignition", "regulation", "fan", "auger", "oxygen", "misc", "manual")
 
     @Volatile var active = false; private set
     @Volatile var started = 0L; private set

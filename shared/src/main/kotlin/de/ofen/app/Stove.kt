@@ -207,6 +207,7 @@ object Stove {
         if (!appRunning()) throw StoveError("Funktionen sind aus – auf der Hauptseite „Funktionen starten“.")
         val op = getKv(Nbe.FN_OPERATING, "*")
         if (op.isEmpty()) throw StoveError("Unerwartete Antwort vom Ofen")
+        if (Control.active()) manualStuckCheck()
         val s = JSONObject()
         s.put("fixed_power", runCatching { getKv(Nbe.FN_SETTINGS, "regulation.fixed_power")["fixed_power"] }.getOrNull() ?: JSONObject.NULL)
         s.put("target_temp", runCatching { getKv(Nbe.FN_SETTINGS, "boiler.temp")["temp"] }.getOrNull() ?: op["boiler_ref"] ?: JSONObject.NULL)
@@ -912,6 +913,29 @@ object Stove {
     private val manLock = Any()
     const val N_OUTPUTS = 8
     private const val MAX_MIN = 240.0
+    /** Zustände, in denen der Ofen Pellets zündet oder brennt – dann darf kein Handbetrieb laufen */
+    private val PELLET_START = setOf("2", "4", "32", "5", "6")
+    /** Nach dem Holz startet der Ofen die Pellets selbst, sobald das Rauchgas unter diesen Wert fällt (Aduro-Anleitung) */
+    private const val PELLET_RESTART_SMOKE = 100.0
+    @Volatile private var manStuckChecked = false
+
+    /**
+     * Einmal nach dem Start der App: Steht die Ofensteuerung noch im Handbetrieb, obwohl die App nichts davon weiß
+     * (App wurde z. B. bei laufendem Gebläse aktualisiert oder von Android beendet)? Dann zurück auf Automatik –
+     * sonst laufen beim nächsten Pelletstart die Schnecken nicht.
+     */
+    private fun manualStuckCheck() {
+        if (manStuckChecked || man.active || man.deadline.isNotEmpty()) return
+        manStuckChecked = true
+        try {
+            val mm = getKv(Nbe.FN_SETTINGS, "manual.manual_mode")["manual_mode"]
+            if (mm == "1") {
+                set("manual.output_std", "0"); set("manual.manual_mode", "0")
+                plat.alert(Alerts.EARLY, "Handbetrieb beendet", "Die Ofensteuerung stand noch im Handbetrieb – zurück auf Automatik, damit die Schnecken wieder laufen.")
+            }
+        } catch (e: Exception) { manStuckChecked = false }
+    }
+
     /** Unter diesem Rauchgaswert gilt der Ofen als kalt – erst dann dürfen Schnecke, Zünder usw. von Hand laufen */
     const val MAN_COLD_SMOKE = 60.0
 
@@ -1027,6 +1051,19 @@ object Stove {
                 // Sicherheitsnetz: wird der Ofen während des Handbetriebs heiß, alles außer dem Frischluftgebläse aus
                 val c = cfg(); val fan = if (c.has("fresh_air_bit")) c.optInt("fresh_air_bit") else -1
                 val smoke = lastStatus?.optString("smoke_temp")?.toDoubleOrNull()
+                // Pellets starten (oder gleich: Ofen wartet nach dem Holz auf Rauchgas < 100 °C) -> Handbetrieb sofort
+                // beenden. Solange die Steuerung im Handbetrieb ist, laufen die Schnecken nicht -> keine Pellets,
+                // Zündung schlägt fehl, Ofen geht in Störung.
+                val st = lastStatus?.optString("state") ?: ""
+                val pelletStart = st in PELLET_START
+                val aboutToStart = st == "0" && smoke != null && smoke < PELLET_RESTART_SMOKE + 5
+                if ((man.active || man.deadline.isNotEmpty()) && (pelletStart || aboutToStart)) {
+                    man.deadline.clear()
+                    applyMan()
+                    man.error = if (pelletStart) "Pellets starten – Handbetrieb beendet, damit die Schnecken laufen."
+                        else "Ofen startet gleich die Pellets – Handbetrieb beendet, damit die Schnecken laufen."
+                    return
+                }
                 if (smoke != null && smoke >= MAN_COLD_SMOKE && man.deadline.keys.any { it != fan }) {
                     man.deadline.keys.filter { it != fan }.forEach { man.deadline.remove(it) }
                     applyMan()
