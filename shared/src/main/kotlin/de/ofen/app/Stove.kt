@@ -251,6 +251,7 @@ object Stove {
         } catch (e: Exception) {
             s.put("thermo", JSONObject().put("enabled", true).put("msg", "Fehler: ${e.message}"))
         }
+        try { warmGuard(s) } catch (e: Exception) { }
         try { autoPowerCheck(s) } catch (e: Exception) {
             s.put("autopower", JSONObject().put("enabled", true).put("msg", "Fehler: ${e.message}"))
         }
@@ -392,6 +393,10 @@ object Stove {
         if (early.stopped) {
             if (st in PELLET_RUN || st in setOf("2", "4", "32", "9")) {
                 cancelEarly() // Ofen läuft wieder (von Hand oder selbst)
+            } else if (c.optBoolean("early_restart") && t < c.optDouble("early_restart_temp", EARLY_RESTART_BELOW) && !needHeat(s, c)) {
+                // Holz abgebrannt, aber der Raum ist warm: noch nicht starten (die Ofensteuerung würde sonst zünden,
+                // danach aber nichts fördern) – erst bei Wärmebedarf
+                info.put("msg", "Holz abgebrannt – Pellets starten, sobald der Raum unter das Ziel fällt")
             } else if (c.optBoolean("early_restart") && t < c.optDouble("early_restart_temp", EARLY_RESTART_BELOW)) {
                 set("misc.start", "1")
                 cancelEarly()
@@ -415,6 +420,71 @@ object Stove {
                 info.put("stopped", true).put("msg", early.msg)
             }
         } else early.aboveSince = 0
+    }
+
+    // ------------------------------------------------------------------ Fehler der Ofensteuerung umgehen
+    // Nach dem Holz steht der Ofen auf „Warten“ und zündet die Pellets neu, sobald das Rauchgas unter 100 °C fällt –
+    // auch wenn der Raum schon wärmer als das Ziel ist. Dann fördert die Schnecke nach der Zündung nicht, das Feuer
+    // geht aus und der Ofen geht in Störung. Die App stoppt ihn vorher (Raum warm) und startet die Pellets erst bei
+    // Wärmebedarf – mit „Automatischer Pelletstart“; sonst bleibt er aus.
+    private const val WARM_STOP_FROM = 100.0      // Fenster vor dem Neustart des Ofens
+    private const val WARM_STOP_BELOW = 115.0
+    private const val WARM_RESTART_HYST = 0.5     // Neustart, wenn der Raum so weit unter dem Ziel ist
+
+    /** Raumtemperatur und Ziel: Homematic-Raum, wenn die Raumsteuerung läuft, sonst Ofen-Fühler */
+    private fun roomAndTarget(s: JSONObject, c: JSONObject): Pair<Double, Double>? {
+        if (c.optBoolean("hm_ctrl") && c.optBoolean("expert") && Hmip.connected() && Hmip.ageSeconds().let { it in 0..900 }) {
+            Hmip.sensor(c.optString("hm_ctrl_id"))?.optDouble("temp", Double.NaN)?.takeIf { !it.isNaN() }
+                ?.let { return it to c.optDouble("hm_ctrl_target", 21.0) }
+        }
+        val r = s.optString("room_temp").toDoubleOrNull(); val g = s.optString("target_temp").toDoubleOrNull()
+        return if (r != null && g != null) r to g else null
+    }
+
+    /** Braucht der Raum Wärme? Ohne Temperaturen: im Zweifel ja (Verhalten wie bisher) */
+    private fun needHeat(s: JSONObject, c: JSONObject): Boolean = roomAndTarget(s, c)?.let { (r, g) -> r < g } ?: true
+
+    private fun clearWarmHold() { val c = cfg(); if (c.has("warm_hold")) { c.remove("warm_hold"); saveCfg(c) } }
+
+    private fun warmGuard(s: JSONObject) {
+        val c = cfg()
+        val st = s.optString("state")
+        val t = smoke(s)
+        val hold = c.optJSONObject("warm_hold")
+        if (c.optBoolean("halted")) { if (hold != null) clearWarmHold(); return }
+        // automatischer Neustart nur mit „Automatischer Pelletstart“; läuft die Homematic-Raumsteuerung, startet die selbst
+        val thermoOn = c.optBoolean("hm_ctrl") && c.optBoolean("expert")
+        val autoStart = c.optBoolean("early_restart") && c.optBoolean("expert") && !thermoOn
+        if (hold != null) {
+            if (st in PELLET_RUN || st in setOf("2", "4", "32", "9")) { clearWarmHold(); return }   // läuft wieder
+            val rt = roomAndTarget(s, c)
+            val info = JSONObject().put("active", true)
+            s.put("warmhold", info).put("state_text", "Bereit – Raum warm")
+            if (autoStart && rt != null && rt.first < rt.second - WARM_RESTART_HYST && (t == null || t < 100)) {
+                set("misc.start", "1")
+                clearWarmHold()
+                plat.alert(Alerts.EARLY, "Pellets starten", "Raum %.1f °C unter Ziel %.1f °C".format(rt.first, rt.second))
+                info.put("active", false); return
+            }
+            info.put("msg", when {
+                thermoOn -> "Neustart nach dem Holz verhindert (Raum war warm) – die Raumsteuerung startet bei Bedarf."
+                autoStart -> "Neustart nach dem Holz verhindert, Raum ist warm. Pellets starten, wenn er unter %.1f °C fällt.".format((rt?.second ?: c.optDouble("hm_ctrl_target", 21.0)) - WARM_RESTART_HYST)
+                else -> "Neustart nach dem Holz verhindert, Raum war warm. Ofen bleibt aus („Automatischer Pelletstart“ ist aus)."
+            })
+            return
+        }
+        // Ofen wartet nach dem Holz und zündet gleich neu – braucht der Raum überhaupt Wärme?
+        if (st != "0" || t == null || t < WARM_STOP_FROM || t >= WARM_STOP_BELOW) return
+        val rt = roomAndTarget(s, c) ?: return
+        if (rt.first < rt.second) return   // Wärmebedarf -> der Ofen darf selbst zünden
+        set("misc.stop", "1")
+        c.put("warm_hold", JSONObject().put("since", System.currentTimeMillis()).put("room", rt.first).put("target", rt.second))
+        saveCfg(c)
+        plat.alert(Alerts.EARLY, "Fehlzündung verhindert",
+            "Raum %.1f °C, Ziel %.1f °C: Die Ofensteuerung hätte jetzt neu gezündet, ohne danach Pellets zu fördern. ".format(rt.first, rt.second) +
+                (if (autoStart) "Die App startet die Pellets, sobald es kälter wird." else if (thermoOn) "Die Raumsteuerung startet bei Bedarf." else "Der Ofen bleibt aus."))
+        s.put("warmhold", JSONObject().put("active", true).put("msg", "Neustart nach dem Holz verhindert, Raum ist warm."))
+            .put("state_text", "Bereit – Raum warm")
     }
 
     // ------------------------------------------------------------------ Heizkörper im Ofenraum (Homematic IP)
@@ -709,7 +779,7 @@ object Stove {
     }
 
     fun halt() {
-        cancelEarly(); early.aboveSince = 0
+        cancelEarly(); early.aboveSince = 0; clearWarmHold()
         val c = cfg()
         c.put("halted", true).put("halted_at", System.currentTimeMillis()).put("halted_seen_off", false); c.remove("halted_ext"); saveCfg(c)
         if (man.active || man.deadline.isNotEmpty()) try { manualAllOff() } catch (e: Exception) { }
@@ -719,7 +789,7 @@ object Stove {
     }
 
     fun resume() {
-        cancelEarly()
+        cancelEarly(); clearWarmHold()
         val c = cfg()
         for (k in listOf("halted", "halted_at", "halted_seen_off", "halted_ext")) c.remove(k)
         saveCfg(c)

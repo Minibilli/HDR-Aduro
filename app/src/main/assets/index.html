@@ -498,7 +498,14 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
       <li><b>Pellet-Füllstand</b>: Behältergröße und Warnschwelle einstellen; auf Wunsch Benachrichtigung, wenn es knapp wird.</li>
       <li><b>Holzverbrennung Temperatur</b> (Experte): ab diesem Rauchgaswert stoppt der Ofen selbst die Pellets.</li>
       <li><b>Pellets früher stoppen</b> (Experte): die App stoppt die Pellets schon vorher, wenn das Rauchgas 30 s über dem Wert liegt – sinnvoll, wenn du Holz nachgelegt hast.</li>
-      <li><b>Automatischer Pelletstart</b> (Experte): ist das Holz abgebrannt, startet die App die Pellets wieder.</li></ul></div></details>
+      <li><b>Automatischer Pelletstart</b> (Experte): ist das Holz abgebrannt, startet die App die Pellets wieder – aber nur, wenn der Raum kälter als das Ziel ist.</li></ul></div></details>
+    <details id="h-warm"><summary>Neustart nach dem Holz (Fehler der Ofensteuerung)</summary><div>
+      <p>Nach dem Holz steht der Ofen auf <b>„Warten“</b> und zündet die Pellets von selbst neu, sobald das Rauchgas unter 100 °C fällt. <b>Fehler der Ofensteuerung:</b> Er tut das auch, wenn der Raum schon wärmer als das Ziel ist. Die Zündung läuft durch, danach fördert die Schnecke aber nicht – das Feuer geht aus, der Ofen geht in Störung.</p>
+      <p><b>Was die App macht:</b> Steht der Ofen auf „Warten“, das Rauchgas ist zwischen 100 und 115 °C und der Raum hat das Ziel erreicht, stoppt die App den Ofen vorher. Die Startseite zeigt dann „Bereit – Raum warm“.</p>
+      <ul><li>Mit <b>Automatischer Pelletstart</b> (Experte) startet die App die Pellets, sobald der Raum 0,5 °C unter das Ziel fällt.</li>
+      <li>Läuft die <b>Homematic-Raumsteuerung</b>, startet sie den Ofen bei Bedarf.</li>
+      <li>Sonst bleibt der Ofen aus, und du bekommst eine Benachrichtigung.</li></ul>
+      <p>Das klappt nur, solange die App den Ofen überwacht (Funktionen an). Mit <b>Ofen aus</b> oder am Ofen ausgeschaltet startet nichts von selbst.</p></div></details>
     <details id="h-hm"><summary>Homematic IP (optional)</summary><div>
       <ol><li><b>Einstellungen → Homematic IP</b>: Access-Point-ID (SGTIN, Aufkleber auf dem Access Point) eintragen oder scannen. PIN nur, wenn du in der Homematic-App eine festgelegt hast.</li>
       <li><b>Verbinden</b> tippen und innerhalb von 3 Minuten die <b>blaue Taste am Access Point</b> drücken.</li></ol>
@@ -858,7 +865,7 @@ function render(s){
  const hal=!!s.halted;
  $('hero').dataset.mode=hal?'halt':al?'alarm':w?(s.wood_warn?'low':'wood'):(running?'run':'off');
  $('state').textContent=hal?'Ausgeschaltet'+(s.halted_ext?' (am Ofen)':'')+(running?' · Ofen stoppt …':al?' · '+s.state_text:''):(s.early&&s.early.stopped)?'Holzbetrieb (App)':s.state_text;
- $('substate').textContent=hal?(s.halted_ext?'Am Ofen gestoppt – alle Automatiken der App sind pausiert, bis du „Starten“ drückst oder den Ofen am Gerät startest.':'Alle Automatiken der App sind pausiert – nichts startet von selbst, bis du „Starten“ drückst.')+(w?' Holz brennt noch.':''):al?al:(s.early&&s.early.msg)?s.early.msg:s.state==='0'?(+s.smoke_temp>=100?'Ofen ist an und wartet, bis das Rauchgas unter 100 °C fällt – dann startet er die Pellets selbst.':'Ofen ist an und wartet auf den Start.'):(s.substate_text&&s.substate_text!=='normal'?s.substate_text:'');
+ $('substate').textContent=hal?(s.halted_ext?'Am Ofen gestoppt – alle Automatiken der App sind pausiert, bis du „Starten“ drückst oder den Ofen am Gerät startest.':'Alle Automatiken der App sind pausiert – nichts startet von selbst, bis du „Starten“ drückst.')+(w?' Holz brennt noch.':''):al?al:(s.warmhold&&s.warmhold.active)?s.warmhold.msg:(s.early&&s.early.msg)?s.early.msg:s.state==='0'?(+s.smoke_temp>=100?'Ofen ist an und wartet, bis das Rauchgas unter 100 °C fällt – dann startet er die Pellets selbst.':'Ofen ist an und wartet auf den Start.'):(s.substate_text&&s.substate_text!=='normal'?s.substate_text:'');
  if(w){$('bigV').textContent=num(s.smoke_temp);$('bigL').textContent='Rauchgas · Holzbetrieb';
   $('m1').textContent=num(s.room_temp,1)+' °C';$('m1l').textContent='Raum';$('m2').textContent=num(s.wood_min)+' °C';$('m2l').textContent='Warnung unter';
   $('gauge').hidden=false;$('gFill').style.width=Math.max(3,Math.min(100,(+s.smoke_temp||0)/(2*(+s.wood_min||150))*100))+'%';
