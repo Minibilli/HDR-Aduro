@@ -523,7 +523,10 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
       <li>Android zeigt dann dauerhaft „Ofen wird überwacht“. Das ist richtig so.</li></ul>
       <p class="mute">Kommen trotzdem keine Warnungen: in den Android-Einstellungen der App die Akkunutzung auf „Nicht eingeschränkt“ stellen.</p></div></details>
     <details id="h-vpn" class="apponly"><summary>Von unterwegs (VPN)</summary><div>
-      <p>Der Ofen ist nur im Heimnetz erreichbar. Von unterwegs braucht das Handy eine <b>WireGuard-VPN-Verbindung</b> nach Hause, z. B. über die FRITZ!Box. Die VPN-App wählst du unter <b>Ofen &amp; Verbindung</b>; ist der Ofen nicht erreichbar, bietet die App an, sie zu öffnen.</p></div></details>
+      <p>Der Ofen ist nur im Heimnetz erreichbar. Von unterwegs braucht das Handy eine <b>WireGuard-VPN-Verbindung</b> nach Hause, z. B. über die FRITZ!Box.</p>
+      <ul><li><b>WG Tunnel</b> (empfohlen, Voreinstellung): schaltet das VPN automatisch ein, sobald du das Heim-WLAN verlässt, und zu Hause wieder aus. Dazu in WG Tunnel dein Heim-WLAN als <b>vertrauenswürdig</b> eintragen und die automatische Verbindung einschalten.</li>
+      <li><b>WireGuard</b> (offizielle App): das VPN unterwegs von Hand ein- und zu Hause wieder ausschalten.</li></ul>
+      <p>Beide Apps nutzen dieselbe WireGuard-Einstellung aus der FRITZ!Box (Datei oder QR-Code). Welche du nutzt, wählst du unter <b>Ofen &amp; Verbindung → VPN-App für unterwegs</b>. Ist der Ofen nicht erreichbar, bietet die App an, sie zu öffnen. Ist das VPN zu Hause noch an, weist die Startseite darauf hin.</p></div></details>
     <details id="h-link"><summary>Raspi-Wandgerät (optional)</summary><div>
       <p>Mit dem Wandgerät <b>HDR Aduro Home Raspi</b> (Raspberry Pi mit Touchscreen) läuft die Überwachung rund um die Uhr. Ohne Raspi funktioniert die App ganz normal allein.</p>
       <ul><li><b>Koppeln</b>: Einstellungen → Raspi koppeln, Adresse des Raspi und den Code vom Touchscreen eintragen.</li>
