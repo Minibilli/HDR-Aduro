@@ -21,6 +21,9 @@ interface Platform {
     fun vpnActive(): Boolean
     /** Hängt das Gerät in einem lokalen Netz, das zur Ofen-IP passt (also zu Hause)? */
     fun onHomeNet(stoveIp: String): Boolean
+    /** Socket fest ans WLAN binden, in dem die Zieladresse liegt – sonst schickt Android die Pakete
+     *  evtl. über mobile Daten (z. B. Samsung „Zu mobilen Daten wechseln“ bei schwachem WLAN) */
+    fun bindLocal(sock: java.net.DatagramSocket, target: String) {}
 
     /** Zustandsmeldung (z. B. „Ofen: Normalbetrieb“) */
     fun notifyState(title: String, text: String)

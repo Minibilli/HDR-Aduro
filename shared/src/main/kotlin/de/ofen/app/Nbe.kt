@@ -61,7 +61,10 @@ object Nbe {
         return NbeResponse(serial, fn, sq, st, raw.substring(i, i + size), address)
     }
 
-    private fun openSocket(timeoutMs: Int): DatagramSocket {
+    /** wird von Stove.init gesetzt (Android: Socket ans Heim-WLAN binden) */
+    @Volatile var binder: (DatagramSocket, String) -> Unit = { _, _ -> }
+
+    private fun openSocket(timeoutMs: Int, target: String): DatagramSocket {
         val s = try {
             DatagramSocket(null).apply { reuseAddress = true; bind(InetSocketAddress(SRC_PORT)) }
         } catch (e: Exception) {
@@ -69,6 +72,7 @@ object Nbe {
         }
         s.broadcast = true
         s.soTimeout = timeoutMs
+        try { binder(s, target) } catch (e: Exception) { }
         return s
     }
 
@@ -77,7 +81,7 @@ object Nbe {
     fun send(address: String, serial: String, pin: String, fn: Int, payload: String, timeoutMs: Int = 5000): NbeResponse {
         seq = (seq + 1) % 99
         val data = buildFrame(serial, pin, fn, payload, seq).toByteArray(CS)
-        openSocket(timeoutMs).use { sock ->
+        openSocket(timeoutMs, address).use { sock ->
             sock.send(DatagramPacket(data, data.size, InetAddress.getByName(address), PORT))
             val buf = ByteArray(4096)
             val deadline = System.currentTimeMillis() + timeoutMs
@@ -102,7 +106,7 @@ object Nbe {
         seq = (seq + 1) % 99
         val data = buildFrame("<serial>", "<pin>", FN_DISCOVER, "NBE Discovery", seq).toByteArray(CS)
         val out = LinkedHashMap<String, NbeResponse>()
-        openSocket(timeoutMs).use { sock ->
+        openSocket(timeoutMs, addresses.firstOrNull() ?: "255.255.255.255").use { sock ->
             for (a in addresses.distinct()) try {
                 sock.send(DatagramPacket(data, data.size, InetAddress.getByName(a), PORT))
             } catch (e: Exception) { }

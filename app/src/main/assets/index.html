@@ -796,10 +796,11 @@ async function offline(e){
  $('hero').dataset.mode='err';$('bigV').textContent='–';$('m1').textContent='–';$('m2').textContent='–';$('gauge').hidden=true;$('powerBtn').disabled=true;$('haltBtn').disabled=true;
  $('state').textContent='Keine Verbindung';
  try{ctlRenderBar(await api('control'))}catch(x){}
- let n={route:'none'};try{n=await api('net')}catch(x){}
+ let n={route:'?'};try{n=await api('net')}catch(x){}
  $('vpnBtn').href=vpnLink();
  if(n.route==='wlan'){setNet('bad','Keine Antwort');$('substate').textContent='Im Heim-WLAN, aber der Ofen meldet sich nicht. Ist er eingeschaltet?';$('vpnBox').hidden=true}
  else if(n.route==='vpn'){setNet('bad','VPN · keine Antwort');$('substate').textContent='VPN ist an, aber der Ofen antwortet nicht.';$('vpnMsg').textContent='Prüfe in der VPN-App, ob der Tunnel verbunden ist.';$('vpnBox').hidden=false}
+ else if(n.route==='?'){setNet('bad','Keine Antwort');$('substate').textContent='Der Ofen antwortet gerade nicht – die App versucht es weiter.';$('vpnBox').hidden=true}
  else{setNet('bad','Offline');$('substate').textContent='';$('vpnMsg').textContent='Du bist nicht im Heim-WLAN. Schalte das VPN ein – die App verbindet sich dann von selbst.';$('vpnBox').hidden=false}
 }
 function schedule(ms){clearTimeout(nextT);nextT=setTimeout(()=>{if(!document.hidden)refresh();else schedule(ms)},ms)}

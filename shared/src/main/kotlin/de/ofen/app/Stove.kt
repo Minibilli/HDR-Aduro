@@ -14,6 +14,7 @@ object Stove {
     fun init(p: Platform) {
         if (!::plat.isInitialized) {
             plat = p
+            Nbe.binder = { sock, a -> plat.bindLocal(sock, a) }
             // „Pellets von der App gestoppt“ überlebt Neustart/Update der App – sonst hält sie den Holzbetrieb für „Warten“
             try { cfg().optJSONObject("early_rt")?.let { early.stopped = it.optBoolean("stopped"); early.msg = it.optString("msg") } } catch (e: Exception) { }
         }
@@ -193,8 +194,9 @@ object Stove {
         } catch (e: Exception) { "" }
         val same = local.isNotBlank() && local.split(".").take(3) == ip.split(".").take(3)
         val route = when {
+            vpn && local.isNotBlank() && !homeWifi -> "vpn"
+            same || homeWifi -> "wlan"     // Pakete gehen fest übers WLAN, auch wenn Android mobile Daten bevorzugt
             vpn && local.isNotBlank() -> "vpn"
-            same -> "wlan"
             else -> "none"
         }
         return out.put("route", route).put("local_ip", local)

@@ -54,6 +54,23 @@ class AndroidPlatform private constructor(private val ctx: Context) : Platform {
         return false
     }
 
+    override fun bindLocal(sock: java.net.DatagramSocket, target: String) {
+        val cm = ctx.getSystemService(ConnectivityManager::class.java)
+        val pre = target.split(".").take(3)
+        val any = target == "255.255.255.255"
+        var fallback: android.net.Network? = null
+        @Suppress("DEPRECATION")
+        for (n in cm.allNetworks) {
+            val caps = cm.getNetworkCapabilities(n) ?: continue
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) || !caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) continue
+            val addrs = cm.getLinkProperties(n)?.linkAddresses ?: continue
+            // Zieladresse im Adressbereich dieses WLANs (auch Broadcast x.y.z.255)
+            if (addrs.any { it.address.hostAddress?.split(".")?.take(3) == pre }) { n.bindSocket(sock); return }
+            if (fallback == null && addrs.any { it.address.address.size == 4 }) fallback = n
+        }
+        if (any && fallback != null) fallback.bindSocket(sock)
+    }
+
     override fun notifyState(title: String, text: String) = Notifier.stateChange(ctx, title, text)
     override fun alert(id: Int, title: String, text: String) = Notifier.alert(ctx, id, title, text)
     override fun clearAlert(id: Int) = Notifier.clear(ctx, id)
