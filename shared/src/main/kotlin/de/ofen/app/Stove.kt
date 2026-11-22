@@ -432,6 +432,7 @@ object Stove {
     private const val WARM_STOP_FROM = 100.0      // Fenster vor dem Neustart des Ofens
     private const val WARM_STOP_BELOW = 115.0
     private const val WARM_RESTART_HYST = 0.5     // Neustart, wenn der Raum so weit unter dem Ziel ist
+    @Volatile private var woodSeenAt = 0L
 
     /** Raumtemperatur und Ziel: Homematic-Raum, wenn die Raumsteuerung läuft, sonst Ofen-Fühler */
     private fun roomAndTarget(s: JSONObject, c: JSONObject): Pair<Double, Double>? {
@@ -458,7 +459,7 @@ object Stove {
         val thermoOn = c.optBoolean("hm_ctrl") && c.optBoolean("expert")
         val autoStart = c.optBoolean("early_restart") && c.optBoolean("expert") && !thermoOn
         if (hold != null) {
-            if (st in PELLET_RUN || st in setOf("2", "4", "32", "9")) { clearWarmHold(); return }   // läuft wieder
+            if (st in PELLET_RUN || st in setOf("2", "4", "32")) { clearWarmHold(); return }   // läuft wieder mit Pellets
             val rt = roomAndTarget(s, c)
             val info = JSONObject().put("active", true)
             s.put("warmhold", info).put("state_text", "Bereit – Raum warm")
@@ -475,8 +476,14 @@ object Stove {
             })
             return
         }
-        // Ofen wartet nach dem Holz und zündet gleich neu – braucht der Raum überhaupt Wärme?
-        if (st != "0" || t == null || t < WARM_STOP_FROM || t >= WARM_STOP_BELOW) return
+        // Ende des Holzbetriebs: braucht der Raum überhaupt Wärme? Der Ofen bleibt oft noch unter 100 °C auf
+        // „Holzbetrieb“ und geht dann über „Warten“ direkt in die Zündung – deshalb schon im Holzbetrieb
+        // eingreifen, sobald das Rauchgas unter 115 °C fällt (Holz fast abgebrannt), und in „Warten“ nach dem Holz.
+        if (st == "9") woodSeenAt = System.currentTimeMillis()
+        if (t == null || t >= WARM_STOP_BELOW) return
+        val afterWood = System.currentTimeMillis() - woodSeenAt < 4 * 3600_000L
+        val trigger = st == "9" || (st == "0" && (t >= WARM_STOP_FROM || afterWood))
+        if (!trigger) return
         val rt = roomAndTarget(s, c) ?: return
         if (rt.first < rt.second) return   // Wärmebedarf -> der Ofen darf selbst zünden
         set("misc.stop", "1")
