@@ -256,6 +256,7 @@ class MainActivity : Activity() {
         fun quitApp() {
             pool.execute {
                 try { Stove.appQuit() } catch (e: Exception) { }
+                try { Widgets.push(this@MainActivity, null, error = "Funktionen aus") } catch (e: Exception) { }
                 runOnUiThread {
                     OfenService.stop(this@MainActivity)
                     NotificationManagerCompat.from(this@MainActivity).cancelAll()

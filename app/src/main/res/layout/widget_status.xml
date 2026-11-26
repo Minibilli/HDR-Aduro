@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="14dp"
+    android:background="@drawable/wbg_dark">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_stat_flame" />
+        <TextView android:id="@+id/w_state" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="6dp" android:textColor="#FFFFFFFF" android:textSize="15sp" android:textStyle="bold"
+            android:maxLines="1" android:ellipsize="end" android:text="HDR Aduro" />
+        <TextView android:id="@+id/w_time" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:textColor="#B3FFFFFF" android:textSize="11sp" android:maxLines="1" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:orientation="horizontal" android:gravity="center_vertical">
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+            <TextView android:id="@+id/w_room" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textColor="#FFFFFFFF" android:textSize="32sp" android:textStyle="bold" android:text="–" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textColor="#CCFFFFFF" android:textSize="12sp" android:text="Raum" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="end">
+            <TextView android:id="@+id/w_target" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textColor="#FFFFFFFF" android:textSize="14sp" />
+            <TextView android:id="@+id/w_smoke" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="2dp" android:textColor="#FFFFFFFF" android:textSize="14sp" />
+        </LinearLayout>
+    </LinearLayout>
+    <FrameLayout android:id="@+id/w_hop_box" android:layout_width="match_parent" android:layout_height="20dp">
+        <ProgressBar android:id="@+id/w_hop" style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:max="100" android:progressDrawable="@drawable/wbar" />
+        <TextView android:id="@+id/w_hop_t" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="11sp" android:textStyle="bold" />
+    </FrameLayout>
+    <TextView android:id="@+id/w_warn" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="6dp" android:textColor="#FFFFFFFF" android:textSize="12sp" android:textStyle="bold"
+        android:maxLines="2" android:ellipsize="end" android:visibility="gone" />
+</LinearLayout>

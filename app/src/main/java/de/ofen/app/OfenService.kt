@@ -39,6 +39,7 @@ class OfenService : Service() {
             // „Beenden“ in der Benachrichtigung
             Thread {
                 try { Stove.appQuit() } catch (e: Exception) { }
+                try { Widgets.push(this, null, error = "Funktionen aus") } catch (e: Exception) { }
                 ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }.start()
@@ -62,6 +63,7 @@ class OfenService : Service() {
             if (viaRaspi != null) {
                 // Raspi überwacht den Ofen – das Handy fragt ihn nicht zusätzlich selbst ab
                 Notifier.updateService(this, "Raspi · $viaRaspi")
+                if (Widgets.any(this)) try { Widgets.fetch(this) } catch (e: Exception) { }
                 sleep(Control.HB_MS)
                 continue
             }
@@ -70,6 +72,7 @@ class OfenService : Service() {
                     wake?.acquire(20_000)
                     val s = Stove.readStatus()
                     val txt = Stove.summary(s)
+                    try { Widgets.push(this, s, Widgets.fanState()) } catch (e: Exception) { }
                     Notifier.updateService(this, when {
                         !Link.linked() -> txt
                         Control.active() -> "Steuerung hier · $txt"
@@ -78,6 +81,7 @@ class OfenService : Service() {
                     })
                 } catch (e: Exception) {
                     Notifier.updateService(this, "Keine Verbindung zum Ofen")
+                    try { Widgets.push(this, null, error = "Keine Verbindung") } catch (e: Exception) { }
                     Stove.valveOfflineCheck()
                 } finally {
                     wake?.let { if (it.isHeld) it.release() }

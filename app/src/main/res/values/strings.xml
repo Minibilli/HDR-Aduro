@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">HDR Aduro</string>
+    <string name="w_status">Ofen-Status</string>
+    <string name="w_status_d">Zustand, Raum, Ziel, Rauchgas, Pellets und Warnungen</string>
+    <string name="w_control">Ofen-Bedienung</string>
+    <string name="w_control_d">Ofen an/aus, Frischluftgebläse und Zieltemperatur</string>
+    <string name="w_wood">Holzbetrieb</string>
+    <string name="w_wood_d">Rauchgas mit Warnschwelle – „Holz nachlegen?“</string>
 </resources>
