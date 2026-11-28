@@ -44,7 +44,8 @@ object Api {
                 .put("bg_dim", c.optInt("bg_dim", 35)).put("card_alpha", c.optInt("card_alpha", 66))
                 .put("ip_changed_at", c.optLong("ip_changed_at")).put("ip_old", c.optString("ip_old"))
                 .put("expert", c.optBoolean("expert")).put("expert_ver", Stove.EXPERT_TEXT_VERSION)
-                .put("hm", Hmip.connected()))
+                .put("hm", Hmip.connected())
+                .put("shutoff", c.optJSONObject("shutoff") ?: JSONObject()).put("shutoff_info", Stove.shutoffInfo()))
         }
         "status" -> ok(Stove.readStatus())
         "net" -> ok(Stove.routeInfo())
@@ -120,6 +121,8 @@ object Api {
             }
             "discover" -> return ok(Stove.discover())
             "setup" -> return ok(Stove.setup(b.optString("serial").trim(), b.optString("pin").trim()))
+            "shutoff" -> return ok(Stove.setShutoff(b))
+            "shutoff/skip" -> return ok(Stove.shutoffSkip(b.optBoolean("on")))
             "start" -> { Stove.resume(); return ok() }
             "stop" -> { Stove.halt(); return ok(JSONObject().put("halted", true)) }
             "power" -> {

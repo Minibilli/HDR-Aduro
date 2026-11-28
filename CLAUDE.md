@@ -13,6 +13,7 @@ Inoffizielle Android-App (Kotlin + WebView-Oberfläche), die einen Aduro-Hybrido
 | `Api.kt` | interne „REST“-Schicht (`GET`/`POST` über Pfadnamen); die Oberfläche ruft nur diese auf |
 | `MainActivity.kt` | WebView, lädt `assets/index.html`; JS-Brücke `window.Ofen` (`request`, Foto, QR-Scan, Vibration …) |
 | `OfenService.kt` | Foreground-Service: Status-Abfrage alle 10–30 s, Handbetrieb-Tick alle 2 s |
+| `Abschaltung.kt` | Zeitlogik der Abschaltzeit (einmalig, täglich, je Wochentag), ohne Android – getestet in `app/src/test/.../AbschaltungTest.kt` |
 | `Hmip.kt` | Homematic IP über die Cloud (inoffizielle API wie homematicip-rest-api) |
 | `Notifier.kt`, `BootReceiver.kt` | Benachrichtigungen, Start nach Neustart oder Update |
 | `assets/index.html` | gesamte Oberfläche (HTML/CSS/JS in einer Datei) |
@@ -28,13 +29,15 @@ Ofen-Zustände (`state`) und ihre Texte stehen in `Stove.STATE_TEXT`. Wichtig si
 5. **Handbetrieb:** nur benannte Ausgänge, immer mit Zeitlimit (max. 240 min). Ohne Limit nur das Frischluftgebläse, bei brennendem Ofen kein Handbetrieb.
 6. **Nur passende Antworten verwerten.** `Nbe.send` akzeptiert nur Antworten mit gleicher Seriennummer, Funktion und Sequenznummer (`Nbe.matches`). Diese Prüfung nicht entfernen.
 7. **Veraltete Daten = keine Entscheidung.** Homematic-Werte älter als 15 min pausieren die Raumsteuerung. Neue Logik genauso behandeln.
-8. **Beim Ausschalten, Beenden oder Expertenmodus aus** alles zurückstellen: Handbetrieb aus, Heizkörper wieder auf, gemerkte Ofen-Zieltemperatur (`hm_prev_boiler`) zurück. `hm_prev_boiler` erst nach erfolgreichem Senden löschen, sonst geht der Wert verloren.
-9. **Zugangsdaten** (Ofen-PIN, Homematic-Token) nie loggen, nie in Fehlermeldungen oder Benachrichtigungen ausgeben, nie an Dritte senden. `GET config` liefert nur `has_pin`, nicht die PIN.
-10. **Oberfläche:** Werte aus Ofen oder Homematic nur über `esc()` bzw. `textContent` einfügen, weil die JS-Brücke den Ofen steuern kann.
+8. **Abschaltzeit:** wirkt wie „Ausschalten“ (`Stove.halt()`). Nachholen höchstens 60 min nach der Zeit (`Abschaltung.CATCH_UP`), nie später. Beim Speichern zählen nur Zeiten ab jetzt (`shutoff_done` = jetzt), sonst ginge der Ofen sofort aus.
+9. **Beim Ausschalten, Beenden oder Expertenmodus aus** alles zurückstellen: Handbetrieb aus, Heizkörper wieder auf, gemerkte Ofen-Zieltemperatur (`hm_prev_boiler`) zurück. `hm_prev_boiler` erst nach erfolgreichem Senden löschen, sonst geht der Wert verloren.
+10. **Zugangsdaten** (Ofen-PIN, Homematic-Token) nie loggen, nie in Fehlermeldungen oder Benachrichtigungen ausgeben, nie an Dritte senden. `GET config` liefert nur `has_pin`, nicht die PIN.
+11. **Oberfläche:** Werte aus Ofen oder Homematic nur über `esc()` bzw. `textContent` einfügen, weil die JS-Brücke den Ofen steuern kann.
 
 ## Bauen
 
-- Kein Gradle-Wrapper im Repo. Gebaut wird über GitHub Actions (`.github/workflows/build.yml`, Gradle 8.9, JDK 17): `gradle :app:assembleRelease`.
+- Kein Gradle-Wrapper im Repo. Gebaut wird über GitHub Actions (`.github/workflows/build.yml`, Gradle 8.9, JDK 17): erst `gradle :app:testReleaseUnitTest`, dann `gradle :app:assembleRelease`. Schlägt ein Test fehl, entsteht keine APK.
+- Test-Build eines Branches: `gh workflow run build.yml --ref <branch>` (Release wird nur von `main` aktualisiert).
 - Push auf `main` aktualisiert das Release `latest` (die APK, die Nutzer installieren). **Nicht ungetestet auf `main` pushen**, zum Ausprobieren den Branch `raspi` oder einen eigenen Branch nehmen.
 - Signatur: `app/release.keystore`, Passwort nur als Secret `OFEN_KEY_PASSWORD`. Keystore nicht ersetzen, sonst lassen sich Updates nicht mehr über die alte Version installieren.
 - minSdk 26, targetSdk 34.

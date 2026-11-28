@@ -35,6 +35,16 @@ class OfenService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_SKIP_SHUTOFF) {
+            // „Diesmal nicht abschalten“ in der Vorwarnung
+            Thread {
+                try {
+                    val i = Stove.shutoffSkip(true)
+                    Notifier.stateChange(this, "Abschaltung ausgelassen", "Der Ofen geht ${i.optString("next_text")} nicht aus.")
+                } catch (e: Exception) { }
+            }.start()
+            return START_STICKY
+        }
         if (intent?.action == ACTION_QUIT) {
             // „Beenden“ in der Benachrichtigung
             Thread {
@@ -94,6 +104,7 @@ class OfenService : Service() {
 
     companion object {
         const val ACTION_QUIT = "de.ofen.app.QUIT"
+        const val ACTION_SKIP_SHUTOFF = "de.ofen.app.SKIP_SHUTOFF"
 
         fun stop(ctx: Context) {
             try { ctx.stopService(Intent(ctx, OfenService::class.java)) } catch (e: Exception) { }
