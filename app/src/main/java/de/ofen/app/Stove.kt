@@ -37,6 +37,12 @@ object Stove {
     // ------------------------------------------------------------------ Konfiguration
     private val prefs get() = ctx.getSharedPreferences("ofen", Context.MODE_PRIVATE)
 
+    /** Zeitstempel für Schutzzeiten – eigene Datei, damit saveCfg() sie nicht mit älteren Ständen überschreibt.
+     *  Liegt ein Wert in der Zukunft (Uhr zurückgestellt), zählt er als „jetzt“: lieber zu lange warten als zu früh zünden. */
+    private val times get() = ctx.getSharedPreferences("ofen_zeiten", Context.MODE_PRIVATE)
+    private fun timeGet(k: String): Long = minOf(times.getLong(k, 0L), System.currentTimeMillis())
+    private fun timeSet(k: String, v: Long) { times.edit().putLong(k, v).commit() }
+
     @Synchronized
     fun cfg(): JSONObject = try {
         JSONObject(prefs.getString("config", "{}") ?: "{}")
@@ -455,7 +461,14 @@ object Stove {
     // ------------------------------------------------------------------ Raumsteuerung (Homematic IP)
     // Startet den Ofen, wenn der gewählte Raum 0,5 °C unter dem Ziel liegt, und stoppt ihn 0,5 °C darüber.
     // Schutz für Ofen und Zünder: mindestens 60 min Laufzeit, mindestens 30 min Pause.
-    class Thermo { var lastStart = 0L; var lastStop = 0L; var waitStartSent = 0L; var lastBoilerSet = 0L }
+    // Start-/Stoppzeitpunkte müssen einen Neustart der App überstehen, sonst beginnen Mindestpause und
+    // Mindestlaufzeit nach jedem Neustart (Android beendet die App, Handy-Neustart, Update) wieder bei null.
+    class Thermo {
+        var lastStart: Long get() = timeGet("th_last_start"); set(v) = timeSet("th_last_start", v)
+        var lastStop: Long get() = timeGet("th_last_stop"); set(v) = timeSet("th_last_stop", v)
+        var waitStartSent = 0L
+        var lastBoilerSet = 0L
+    }
     val thermo = Thermo()
     private const val TH_HYST = 0.5
     private const val TH_MIN_RUN = 60 * 60_000L
@@ -476,21 +489,34 @@ object Stove {
         try { set("boiler.temp", want.toString()); s.put("target_temp", want) } catch (e: Exception) { }
     }
 
-    /** Beim Zurückschalten auf den Ofen-Fühler: gemerkte Ofen-Zieltemperatur wiederherstellen */
-    fun restoreBoilerTarget(c: JSONObject) {
-        if (!c.has("hm_prev_boiler")) return
+    /** Beim Zurückschalten auf den Ofen-Fühler: gemerkte Ofen-Zieltemperatur wiederherstellen.
+     *  Der gemerkte Wert wird erst nach erfolgreichem Senden gelöscht; schlägt es fehl (Ofen nicht erreichbar),
+     *  versucht thermoCheck() es später erneut. Rückgabe: true = nichts mehr offen. */
+    fun restoreBoilerTarget(c: JSONObject): Boolean {
+        if (!c.has("hm_prev_boiler")) return true
         val prev = c.optInt("hm_prev_boiler")
-        c.remove("hm_prev_boiler")
-        try { set("boiler.temp", prev.toString()) } catch (e: Exception) { }
+        return try {
+            set("boiler.temp", prev.toString())
+            c.remove("hm_prev_boiler")
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     private fun thermoCheck(s: JSONObject) {
         val c = cfg()
         val info = JSONObject().put("enabled", c.optBoolean("hm_ctrl"))
         s.put("thermo", info)
-        if (!c.optBoolean("hm_ctrl")) return
-        if (!c.optBoolean("expert")) {   // Raumsteuerung startet den Ofen selbsttätig -> nur im Expertenmodus
-            if (c.has("hm_prev_boiler")) { restoreBoilerTarget(c); saveCfg(c) }
+        if (!c.optBoolean("hm_ctrl") || !c.optBoolean("expert")) {
+            // Raumsteuerung aus (oder ohne Expertenmodus nicht erlaubt): ein noch offenes Zurückstellen der
+            // Ofen-Zieltemperatur nachholen – höchstens einmal pro Minute versuchen
+            val now = System.currentTimeMillis()
+            if (c.has("hm_prev_boiler") && now - thermo.lastBoilerSet >= 60_000L) {
+                thermo.lastBoilerSet = now
+                if (restoreBoilerTarget(c)) saveCfg(c)
+            }
+            if (!c.optBoolean("hm_ctrl")) return
             info.put("enabled", false).put("msg", "nur im Expertenmodus"); return
         }
         if (c.optBoolean("halted")) { info.put("msg", "pausiert – Ofen ausgeschaltet"); return }
@@ -562,7 +588,7 @@ object Stove {
     private const val AP_MIN_GAP = 10 * 60_000L
     private val AP_PCT = mapOf(1 to "10", 2 to "50", 3 to "100")
     private val AP_NAME = mapOf(1 to "Niedrig", 2 to "Mittel", 3 to "Hoch")
-    @Volatile private var apLastSet = 0L
+    private var apLastSet: Long get() = timeGet("ap_last_set"); set(v) = timeSet("ap_last_set", v)
 
     fun autoPowerOn() = cfg().optBoolean("auto_power")
 

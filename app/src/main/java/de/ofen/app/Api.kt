@@ -134,7 +134,10 @@ object Api {
             "target" -> {
                 val t = b.optString("temp").toDoubleOrNull()?.toInt()
                 if (t == null || t !in 5..35) return err("Zieltemperatur 5–35 °C")
-                Stove.set("boiler.temp", t.toString()); return ok()
+                Stove.set("boiler.temp", t.toString())
+                // Von Hand gesetzt -> ein noch offenes Zurückstellen aus der Raumsteuerung darf das nicht überschreiben
+                Stove.cfg().let { if (!it.optBoolean("hm_ctrl") && it.has("hm_prev_boiler")) { it.remove("hm_prev_boiler"); Stove.saveCfg(it) } }
+                return ok()
             }
             "hopper/fill" -> {
                 val kg = b.optString("kg").toDoubleOrNull() ?: return err("Ungültige Menge")

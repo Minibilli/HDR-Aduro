@@ -72,11 +72,19 @@ object Nbe {
         return s
     }
 
-    /** Sendet eine Anfrage und wartet auf die Antwort. Immer nur eine Anfrage gleichzeitig. */
+    private fun normSerial(s: String) = s.trim().trimStart('0')
+
+    /** Gehört die Antwort zu genau dieser Anfrage? Verspätete Antworten auf frühere Anfragen und Pakete an die
+     *  Aduro-App (gleicher Port 1901) dürfen nicht als aktueller Zustand durchgehen. */
+    fun matches(r: NbeResponse, serial: String, fn: Int, seq: Int): Boolean =
+        r.function == fn && r.seq == seq && normSerial(r.serial) == normSerial(serial.take(6))
+
+    /** Sendet eine Anfrage und wartet auf die passende Antwort. Immer nur eine Anfrage gleichzeitig. */
     @Synchronized
     fun send(address: String, serial: String, pin: String, fn: Int, payload: String, timeoutMs: Int = 5000): NbeResponse {
         seq = (seq + 1) % 99
-        val data = buildFrame(serial, pin, fn, payload, seq).toByteArray(CS)
+        val mySeq = seq
+        val data = buildFrame(serial, pin, fn, payload, mySeq).toByteArray(CS)
         openSocket(timeoutMs).use { sock ->
             sock.send(DatagramPacket(data, data.size, InetAddress.getByName(address), PORT))
             val buf = ByteArray(4096)
@@ -85,7 +93,9 @@ object Nbe {
                 val pkt = DatagramPacket(buf, buf.size)
                 sock.receive(pkt) // wirft SocketTimeoutException
                 try {
-                    return parseResponse(String(pkt.data, 0, pkt.length, CS), pkt.address?.hostAddress ?: "")
+                    val r = parseResponse(String(pkt.data, 0, pkt.length, CS), pkt.address?.hostAddress ?: "")
+                    if (matches(r, serial, fn, mySeq)) return r
+                    // fremde oder veraltete Antwort – verwerfen und weiter warten
                 } catch (e: Exception) {
                     // unbrauchbares Paket – weiter warten
                 }
@@ -98,6 +108,7 @@ object Nbe {
     }
 
     /** Rundruf „NBE Discovery“ an alle angegebenen Adressen; sammelt alle Antworten bis zum Zeitablauf */
+    @Synchronized
     fun discoverAll(addresses: List<String>, timeoutMs: Int = 2500): List<NbeResponse> {
         seq = (seq + 1) % 99
         val data = buildFrame("<serial>", "<pin>", FN_DISCOVER, "NBE Discovery", seq).toByteArray(CS)
