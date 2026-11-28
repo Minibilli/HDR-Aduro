@@ -40,7 +40,7 @@ object Control {
         "wood_min", "early_stop", "early_restart", "early_temp", "early_restart_temp", "auto_power",
         "hm_ctrl", "hm_ctrl_id", "hm_ctrl_target", "hm_valve", "hm_valve_id", "hm_valve_temp",
         "hm_valve_closed", "hm_prev_boiler",
-        "halted", "halted_at", "halted_seen_off", "halted_ext", "warm_hold", "shutoff",
+        "halted", "halted_at", "halted_seen_off", "halted_ext", "warm_hold", "shutoff", "schedule",
         "expert", "expert_ack", "output_names", "fresh_air_bit",
         "hopper_cap", "hopper_warn", "hopper_notify", "hopper_filled_at", "hopper_filled_kg",
     )

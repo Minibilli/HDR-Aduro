@@ -250,6 +250,11 @@ object Stove {
         } catch (e: Exception) {
             s.optJSONObject("shutoff")?.put("msg", "Abschaltung fehlgeschlagen – neuer Versuch: ${e.message}")
         }
+        try {
+            schedCheck(s, act)
+        } catch (e: Exception) {
+            s.put("schedule", schedInfo().put("msg", "Fehler: ${e.message}"))
+        }
         try { hopperCheck(s) } catch (e: Exception) { }
         if (!act) {
             try { passiveInfo(s) } catch (e: Exception) { }
@@ -412,6 +417,8 @@ object Stove {
                 // Holz abgebrannt, aber der Raum ist warm: noch nicht starten (die Ofensteuerung würde sonst zünden,
                 // danach aber nichts fördern) – erst bei Wärmebedarf
                 info.put("msg", "Holz abgebrannt – Pellets starten, sobald der Raum unter das Ziel fällt")
+            } else if (c.optBoolean("early_restart") && t < c.optDouble("early_restart_temp", EARLY_RESTART_BELOW) && schedBlocks(c)) {
+                info.put("msg", "Holz abgebrannt – Zeitplan: aus bis ${schedInfo().optString("next_text")}")
             } else if (c.optBoolean("early_restart") && t < c.optDouble("early_restart_temp", EARLY_RESTART_BELOW)) {
                 set("misc.start", "1")
                 cancelEarly()
@@ -451,7 +458,7 @@ object Stove {
     private fun roomAndTarget(s: JSONObject, c: JSONObject): Pair<Double, Double>? {
         if (c.optBoolean("hm_ctrl") && c.optBoolean("expert") && Hmip.connected() && Hmip.ageSeconds().let { it in 0..900 }) {
             Hmip.sensor(c.optString("hm_ctrl_id"))?.optDouble("temp", Double.NaN)?.takeIf { !it.isNaN() }
-                ?.let { return it to c.optDouble("hm_ctrl_target", 21.0) }
+                ?.let { return it to hmTarget(c) }
         }
         val r = s.optString("room_temp").toDoubleOrNull(); val g = s.optString("target_temp").toDoubleOrNull()
         return if (r != null && g != null) r to g else null
@@ -476,7 +483,7 @@ object Stove {
             val rt = roomAndTarget(s, c)
             val info = JSONObject().put("active", true)
             s.put("warmhold", info).put("state_text", "Bereit – Raum warm")
-            if (autoStart && rt != null && rt.first < rt.second - WARM_RESTART_HYST && (t == null || t < 100)) {
+            if (autoStart && !schedBlocks(c) && rt != null && rt.first < rt.second - WARM_RESTART_HYST && (t == null || t < 100)) {
                 set("misc.start", "1")
                 clearWarmHold()
                 plat.alert(Alerts.EARLY, "Pellets starten", "Raum %.1f °C unter Ziel %.1f °C".format(rt.first, rt.second))
@@ -681,7 +688,7 @@ object Stove {
         if (!Hmip.connected()) { info.put("msg", "Homematic nicht verbunden"); return }
         Hmip.refresh()
         val sen = Hmip.sensor(c.optString("hm_ctrl_id"))
-        val target = c.optDouble("hm_ctrl_target", 21.0)
+        val target = hmTarget(c)
         info.put("target", target)
         raiseBoilerTarget(c, s, target)
         if (sen == null) { info.put("msg", "Raum nicht gefunden"); return }
@@ -692,6 +699,7 @@ object Stove {
         val st = s.optString("state")
         if (st == "9" || man.wood || early.stopped) { info.put("msg", "pausiert (Holzbetrieb)"); return }
         if (man.active) { info.put("msg", "pausiert (Handbetrieb)"); return }
+        if (schedBlocks(c)) { info.put("msg", "Zeitplan: aus bis ${schedInfo().optString("next_text")}"); return }
         val now = System.currentTimeMillis()
         if (st != "0") thermo.waitStartSent = 0
         when {
@@ -756,6 +764,7 @@ object Stove {
         s.put("autopower", info)
         if (!c.optBoolean("auto_power")) return
         if (c.optBoolean("halted")) { info.put("msg", "pausiert – Ofen ausgeschaltet"); return }
+        schedWindow(c)?.takeIf { it.f.stufe in 1..3 }?.let { info.put("msg", "pausiert – Zeitplan mit fester Stufe"); return }
         val st = s.optString("state")
         if (st == "9" || man.wood) { info.put("msg", "pausiert (Holzbetrieb)"); return }
         if (man.active) { info.put("msg", "pausiert (Handbetrieb)"); return }
@@ -924,13 +933,13 @@ object Stove {
 
     private val zone get() = java.time.ZoneId.systemDefault()
     private fun ms(t: java.time.LocalDateTime) = t.atZone(zone).toInstant().toEpochMilli()
-    private val SO_KEYS = listOf("shutoff_done", "shutoff_skip", "shutoff_warned")
+    private val SO_KEYS = listOf("shutoff_done", "shutoff_skip", "shutoff_warned", "sched_on_done", "sched_set_done", "sched_off_done")
 
     /** Zeitstempel der Abschaltzeit für die Übergabe der Steuerung */
     fun shutoffTimes(): JSONObject = JSONObject().also { o -> for (k in SO_KEYS) timeRaw(k).takeIf { it > 0 }?.let { o.put(k, it) } }
 
     fun applyShutoffTimes(o: JSONObject) {
-        for (k in SO_KEYS) if (o.has(k)) timeSet(k, o.optLong(k)) else if (k != "shutoff_done") timeDel(k)
+        for (k in SO_KEYS) if (o.has(k)) timeSet(k, o.optLong(k)) else if (k != "shutoff_done" && k != "sched_off_done") timeDel(k)
     }
 
     /** Für Oberfläche und Status: Modus, nächste Abschaltung, ausgelassen? */
@@ -1019,6 +1028,147 @@ object Stove {
         if (halted() || timeRaw("shutoff_skip") == wMs || timeRaw("shutoff_warned") == wMs) return
         timeSet("shutoff_warned", wMs)
         plat.shutoffWarn("%02d:%02d".format(w.hour, w.minute))
+    }
+
+    // ------------------------------------------------------------------ Zeitplan (Wochenprogramm)
+    // In den Zeitfenstern soll der Ofen laufen (Zieltemperatur, optional feste Heizstufe), außerhalb ist er aus.
+    // Startet den Ofen selbsttätig -> nur im Expertenmodus, nur auf dem Gerät mit der Steuerung, nie wenn
+    // „Ausgeschaltet“, nie aus Holzbetrieb/Handbetrieb/Alarm (nur aus 14 und 23) und nur bei Rauchgas < 100 °C.
+    // Ausschalten am Fensterende ist ein normaler Stopp (kein „Ausgeschaltet“), damit das nächste Fenster wieder startet.
+    // Zeitlogik in Zeitplan.kt (mit Tests).
+
+    fun schedPlan(c: JSONObject = cfg()): Zeitplan.Plan {
+        val o = c.optJSONObject("schedule") ?: return Zeitplan.Plan()
+        val d = o.optJSONArray("days")
+        val tage = List(7) { i ->
+            val arr = d?.optJSONArray(i) ?: org.json.JSONArray()
+            (0 until arr.length()).mapNotNull { j ->
+                val f = arr.optJSONObject(j) ?: return@mapNotNull null
+                val von = Zeitplan.minuten(f.optString("from"), false) ?: return@mapNotNull null
+                val bis = Zeitplan.minuten(f.optString("to"), true) ?: return@mapNotNull null
+                Zeitplan.Fenster(von, bis, f.optDouble("temp", 21.0), f.optInt("level", 0))
+            }
+        }
+        return Zeitplan.Plan(o.optBoolean("on"), tage)
+    }
+
+    /** Zeitplan wirksam? (an + Expertenmodus) */
+    private fun schedOn(c: JSONObject) = c.optBoolean("expert") && schedPlan(c).on
+
+    /** laufendes Zeitfenster, wenn der Zeitplan wirksam ist */
+    fun schedWindow(c: JSONObject = cfg()): Zeitplan.Aktiv? =
+        if (!schedOn(c)) null else Zeitplan.aktiv(schedPlan(c), java.time.LocalDateTime.now(zone))
+
+    /** Außerhalb der Zeitfenster dürfen keine Automatiken den Ofen starten */
+    fun schedBlocks(c: JSONObject = cfg()): Boolean = schedOn(c) && schedWindow(c) == null
+
+    /** Ziel der Homematic-Raumsteuerung: im Zeitfenster dessen Temperatur, sonst die eingestellte */
+    private fun hmTarget(c: JSONObject): Double = schedWindow(c)?.f?.temp ?: c.optDouble("hm_ctrl_target", 21.0)
+
+    private val LEVEL_NAME = mapOf(0 to "Stufe wie eingestellt", 1 to "Niedrig", 2 to "Mittel", 3 to "Hoch")
+
+    fun schedInfo(): JSONObject {
+        val c = cfg()
+        val p = schedPlan(c)
+        val info = JSONObject().put("on", p.on).put("expert", c.optBoolean("expert"))
+        if (!p.on) return info
+        if (!c.optBoolean("expert")) return info.put("msg", "pausiert – nur im Expertenmodus")
+        val now = java.time.LocalDateTime.now(zone)
+        Zeitplan.aktiv(p, now)?.let { a ->
+            info.put("active", true).put("temp", a.f.temp).put("level", a.f.stufe)
+                .put("window", "${Zeitplan.text(a.f.von)}–${Zeitplan.text(a.f.bis)}")
+        }
+        Zeitplan.naechsterWechsel(p, now)?.let { (t, an) ->
+            info.put("next_text", Zeitplan.label(t, now)).put("next_on", an)
+        }
+        return info
+    }
+
+    fun setSchedule(b: JSONObject): JSONObject {
+        val on = b.optBoolean("on")
+        val c = cfg()
+        if (on && !c.optBoolean("expert")) throw StoveError("Der Zeitplan startet den Ofen selbsttätig – nur im Expertenmodus")
+        val d = b.optJSONArray("days") ?: org.json.JSONArray()
+        val out = org.json.JSONArray()
+        val WD = listOf("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")
+        for (i in 0 until 7) {
+            val arr = d.optJSONArray(i) ?: org.json.JSONArray()
+            val fs = mutableListOf<Zeitplan.Fenster>()
+            val day = org.json.JSONArray()
+            for (j in 0 until arr.length()) {
+                val f = arr.optJSONObject(j) ?: continue
+                val von = Zeitplan.minuten(f.optString("from"), false) ?: throw StoveError("${WD[i]}: ungültige Beginnzeit")
+                val bis = Zeitplan.minuten(f.optString("to"), true) ?: throw StoveError("${WD[i]}: ungültige Endzeit")
+                val temp = f.optString("temp").replace(',', '.').toDoubleOrNull() ?: throw StoveError("${WD[i]}: Zieltemperatur fehlt")
+                val lvl = f.optInt("level", 0)
+                fs += Zeitplan.Fenster(von, bis, temp, lvl)
+            }
+            Zeitplan.pruefen(fs)?.let { throw StoveError("${WD[i]}: $it") }
+            for (f in fs.sortedBy { it.von })
+                day.put(JSONObject().put("from", Zeitplan.text(f.von)).put("to", Zeitplan.text(f.bis)).put("temp", f.temp).put("level", f.stufe))
+            out.put(day)
+        }
+        if (on && (0 until 7).all { out.optJSONArray(it).length() == 0 }) throw StoveError("Bitte mindestens ein Zeitfenster eintragen")
+        c.put("schedule", JSONObject().put("on", on).put("days", out)); saveCfg(c)
+        // Nur Wechsel ab jetzt: ein gerade laufendes Fenster startet den Ofen nicht sofort (dafür „Ofen an“),
+        // ein Fensterende in der Vergangenheit stoppt ihn nicht nachträglich
+        val now = java.time.LocalDateTime.now(zone)
+        val a = Zeitplan.aktiv(schedPlan(c), now)
+        if (a != null) { timeSet("sched_on_done", ms(a.start)); timeSet("sched_set_done", ms(a.start)) }
+        timeSet("sched_off_done", System.currentTimeMillis())
+        return schedInfo()
+    }
+
+    @Synchronized
+    private fun schedCheck(s: JSONObject, act: Boolean) {
+        val c = cfg()
+        val info = schedInfo()
+        s.put("schedule", info)
+        if (timeRaw("sched_off_done") <= 0L) timeSet("sched_off_done", System.currentTimeMillis())
+        if (!act || !schedOn(c)) return
+        if (c.optBoolean("halted")) { info.put("msg", "pausiert – Ofen ausgeschaltet"); return }
+        val p = schedPlan(c)
+        val now = java.time.LocalDateTime.now(zone)
+        val st = s.optString("state")
+        val t = smoke(s)
+        val notify = c.optBoolean("notify_state", true)
+        val a = Zeitplan.aktiv(p, now)
+        if (a != null) {
+            val ws = ms(a.start)
+            val thermoOn = c.optBoolean("hm_ctrl")
+            if (timeRaw("sched_set_done") != ws) {
+                // Beginn des Fensters: Ziel und Heizstufe einstellen (danach darf man von Hand ändern)
+                if (!thermoOn) { set("boiler.temp", a.f.temp.toInt().toString()); s.put("target_temp", a.f.temp.toInt()) }
+                if (a.f.stufe in 1..3) { set("regulation.fixed_power", AP_PCT.getValue(a.f.stufe)); s.put("fixed_power", AP_PCT.getValue(a.f.stufe)) }
+                timeSet("sched_set_done", ws)
+            }
+            if (timeRaw("sched_on_done") == ws) return
+            when {
+                thermoOn -> timeSet("sched_on_done", ws)                       // Raumsteuerung startet selbst
+                st in BURNING || st == "0" -> timeSet("sched_on_done", ws)      // läuft schon / Ofen startet selbst
+                st !in setOf("14", "23") -> info.put("msg", "startet nicht – Ofen meldet „${s.optString("state_text")}“")
+                man.wood || early.stopped || man.active -> info.put("msg", "wartet (Holz- oder Handbetrieb)")
+                t == null || t >= 100 -> info.put("msg", "wartet, bis das Rauchgas unter 100 °C ist")
+                !needHeat(s, c) -> info.put("msg", "startet, sobald der Raum unter %.1f °C fällt".format(a.f.temp))
+                else -> {
+                    set("misc.start", "1")
+                    clearWarmHold()
+                    timeSet("sched_on_done", ws)
+                    info.put("msg", "Ofen gestartet")
+                    if (notify) plat.notifyState("Zeitplan: Ofen gestartet",
+                        "Zeitfenster ${Zeitplan.text(a.f.von)}–${Zeitplan.text(a.f.bis)}, Ziel %.1f °C".format(a.f.temp))
+                }
+            }
+            return
+        }
+        // außerhalb: am Ende eines Fensters ausschalten (bis 60 min nachholen); Holz brennt von selbst ab
+        val end = Zeitplan.letztesEnde(p, now) ?: return
+        if (ms(end) <= timeRaw("sched_off_done")) return
+        if (st in setOf("0", "2", "4", "5", "6", "32")) {
+            set("misc.stop", "1")
+            if (notify) plat.notifyState("Zeitplan: Ofen aus", "Zeitfenster bis ${"%02d:%02d".format(end.hour, end.minute).replace("00:00", "24:00")} beendet.")
+        }
+        timeSet("sched_off_done", ms(end))
     }
 
     /** „Funktionen starten“: erst danach spricht die App mit dem Ofen und die Überwachung läuft */

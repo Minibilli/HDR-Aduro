@@ -45,7 +45,8 @@ object Api {
                 .put("ip_changed_at", c.optLong("ip_changed_at")).put("ip_old", c.optString("ip_old"))
                 .put("expert", c.optBoolean("expert")).put("expert_ver", Stove.EXPERT_TEXT_VERSION)
                 .put("hm", Hmip.connected()).put("linked", Stove.platform.kind == "raspi" || Link.linked())
-                .put("shutoff", c.optJSONObject("shutoff") ?: JSONObject()).put("shutoff_info", Stove.shutoffInfo()))
+                .put("shutoff", c.optJSONObject("shutoff") ?: JSONObject()).put("shutoff_info", Stove.shutoffInfo())
+                .put("schedule", c.optJSONObject("schedule") ?: JSONObject()).put("schedule_info", Stove.schedInfo()))
         }
         "status" -> ok(Stove.readStatus().put("control", Control.info()))
         "control" -> ok(Control.info())
@@ -84,7 +85,7 @@ object Api {
     private val EXPERT_ONLY = setOf("pelletstop", "manual/switch", "manual/probe", "manual/name", "manual/names", "settings/read", "settings/write")
 
     /** Gerät ohne Steuerung: was die Automatiken betrifft, darf nur das steuernde Gerät ändern */
-    private val HOLDER_ONLY = setOf("expert", "manual/switch", "manual/probe", "manual/name", "manual/names", "pelletstop", "settings/write", "hm/disconnect", "hopper/config", "shutoff", "shutoff/skip")
+    private val HOLDER_ONLY = setOf("expert", "manual/switch", "manual/probe", "manual/name", "manual/names", "pelletstop", "settings/write", "hm/disconnect", "hopper/config", "shutoff", "shutoff/skip", "schedule")
 
     private fun handlePost(p: String, b: JSONObject): JSONObject {
         when (p) {
@@ -154,6 +155,7 @@ object Api {
             "discover" -> return ok(Stove.discover())
             "setup" -> return ok(Stove.setup(b.optString("serial").trim(), b.optString("pin").trim()))
             "shutoff" -> return ok(Stove.setShutoff(b))
+            "schedule" -> return ok(Stove.setSchedule(b))
             "shutoff/skip" -> return ok(Stove.shutoffSkip(b.optBoolean("on")))
             "start" -> { Stove.resume(); return ok() }
             "stop" -> { Stove.halt(); return ok(JSONObject().put("halted", true)) }
