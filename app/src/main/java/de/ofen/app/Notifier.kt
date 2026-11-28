@@ -21,6 +21,7 @@ object Notifier {
     const val ID_STATE = 4
     const val ID_HOPPER = 5
     const val ID_CONTROL = 6
+    const val ID_SHUTOFF = 7
     const val CH_STATE = "state"
 
     fun channels(ctx: Context) {
@@ -88,6 +89,24 @@ object Notifier {
             .setContentIntent(openApp(ctx))
             .build()
         try { NotificationManagerCompat.from(ctx).notify(id, n) } catch (e: SecurityException) { }
+    }
+
+    /** Vorwarnung vor der Abschaltzeit, mit Knopf „Diesmal nicht abschalten“ */
+    fun shutoffWarn(ctx: Context, hm: String) {
+        if (!allowed(ctx)) return
+        val skip = PendingIntent.getService(ctx, 2,
+            Intent(ctx, OfenService::class.java).setAction(OfenService.ACTION_SKIP_SHUTOFF),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val n = NotificationCompat.Builder(ctx, CH_WARN)
+            .setSmallIcon(R.drawable.ic_stat_flame)
+            .setContentTitle("Ofen geht um $hm aus")
+            .setContentText("Abschaltzeit in 15 Minuten.")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(openApp(ctx))
+            .addAction(0, "Diesmal nicht abschalten", skip)
+            .build()
+        try { NotificationManagerCompat.from(ctx).notify(ID_SHUTOFF, n) } catch (e: SecurityException) { }
     }
 
     fun stateChange(ctx: Context, title: String, text: String) {

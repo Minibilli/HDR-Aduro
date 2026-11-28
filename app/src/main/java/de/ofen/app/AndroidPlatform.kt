@@ -71,6 +71,13 @@ class AndroidPlatform private constructor(private val ctx: Context) : Platform {
         if (any && fallback != null) fallback.bindSocket(sock)
     }
 
+    // Zeitstempel in eigener Datei (gleiche wie in der Version mit Abschaltzeit: „ofen_zeiten“)
+    private val times get() = ctx.getSharedPreferences("ofen_zeiten", Context.MODE_PRIVATE)
+    override fun timeLoad(k: String): Long = times.getLong(k, 0L)
+    override fun timeSave(k: String, v: Long) { times.edit().putLong(k, v).commit() }
+    override fun timeDel(k: String) { times.edit().remove(k).commit() }
+    override fun shutoffWarn(hm: String) = Notifier.shutoffWarn(ctx, hm)
+
     override fun notifyState(title: String, text: String) = Notifier.stateChange(ctx, title, text)
     override fun alert(id: Int, title: String, text: String) = Notifier.alert(ctx, id, title, text)
     override fun clearAlert(id: Int) = Notifier.clear(ctx, id)

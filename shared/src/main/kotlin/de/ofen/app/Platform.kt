@@ -25,6 +25,15 @@ interface Platform {
      *  evtl. über mobile Daten (z. B. Samsung „Zu mobilen Daten wechseln“ bei schwachem WLAN) */
     fun bindLocal(sock: java.net.DatagramSocket, target: String) {}
 
+    /** Zeitstempel für Schutzzeiten und Abschaltzeit – eigener Speicher, damit saveConfig() sie nicht mit
+     *  älteren Ständen überschreibt, und dauerhaft, damit sie einen Neustart überstehen */
+    fun timeLoad(k: String): Long
+    fun timeSave(k: String, v: Long)
+    fun timeDel(k: String)
+
+    /** Vorwarnung vor der Abschaltzeit (Android: mit Knopf „Diesmal nicht abschalten“) */
+    fun shutoffWarn(hm: String) { alert(Alerts.SHUTOFF, "Ofen geht um $hm aus", "Abschaltzeit in 15 Minuten.") }
+
     /** Zustandsmeldung (z. B. „Ofen: Normalbetrieb“) */
     fun notifyState(title: String, text: String)
     /** Warnung mit fester Nummer (ersetzt eine frühere mit derselben Nummer) */
@@ -38,4 +47,5 @@ object Alerts {
     const val EARLY = 3
     const val HOPPER = 5
     const val CONTROL = 6
+    const val SHUTOFF = 7
 }

@@ -40,7 +40,7 @@ object Control {
         "wood_min", "early_stop", "early_restart", "early_temp", "early_restart_temp", "auto_power",
         "hm_ctrl", "hm_ctrl_id", "hm_ctrl_target", "hm_valve", "hm_valve_id", "hm_valve_temp",
         "hm_valve_closed", "hm_prev_boiler",
-        "halted", "halted_at", "halted_seen_off", "halted_ext", "warm_hold",
+        "halted", "halted_at", "halted_seen_off", "halted_ext", "warm_hold", "shutoff",
         "expert", "expert_ack", "output_names", "fresh_air_bit",
         "hopper_cap", "hopper_warn", "hopper_notify", "hopper_filled_at", "hopper_filled_kg",
     )
@@ -138,6 +138,7 @@ object Control {
             .put("early_stopped", Stove.early.stopped).put("early_msg", Stove.early.msg)
             .put("th_start", Stove.thermo.lastStart).put("th_stop", Stove.thermo.lastStop).put("th_wait", Stove.thermo.waitStartSent)
             .put("ap_last", Stove.apLastSet).put("valve_off", Stove.valve.offSince)
+            .put("times", Stove.shutoffTimes())
         val info = JSONObject()
         if (isHolder()) Stove.lastStatus?.let { s -> for (k in listOf("early", "thermo", "autopower", "valve")) s.optJSONObject(k)?.takeIf { !it.optBoolean("remote") }?.let { info.put(k, it) } }
         else remote?.let { r -> for (k in r.keys()) info.put(k, r.get(k)) }
@@ -159,6 +160,7 @@ object Control {
             Stove.thermo.lastStart = rt.optLong("th_start"); Stove.thermo.lastStop = rt.optLong("th_stop")
             Stove.thermo.waitStartSent = rt.optLong("th_wait")
             Stove.apLastSet = rt.optLong("ap_last"); Stove.valve.offSince = rt.optLong("valve_off")
+            rt.optJSONObject("times")?.let { Stove.applyShutoffTimes(it) }
         }
         remote = p.optJSONObject("info")
     }

@@ -35,6 +35,19 @@ class OfenService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_SKIP_SHUTOFF) {
+            // „Diesmal nicht abschalten“ in der Vorwarnung (gekoppelt: über den Raspi, wenn der steuert)
+            Thread {
+                try {
+                    val r = Link.handle("shutoff/skip", org.json.JSONObject().put("on", true).toString())
+                    val i = r.optJSONObject("data")
+                    Notifier.clear(this, Notifier.ID_SHUTOFF)
+                    if (i != null) Notifier.stateChange(this, "Abschaltung ausgelassen", "Der Ofen geht ${i.optString("next_text")} nicht aus.")
+                    else Notifier.stateChange(this, "Auslassen fehlgeschlagen", r.optString("error"))
+                } catch (e: Exception) { }
+            }.start()
+            return START_STICKY
+        }
         if (intent?.action == ACTION_QUIT) {
             // „Beenden“ in der Benachrichtigung
             Thread {
@@ -106,6 +119,7 @@ class OfenService : Service() {
 
     companion object {
         const val ACTION_QUIT = "de.ofen.app.QUIT"
+        const val ACTION_SKIP_SHUTOFF = "de.ofen.app.SKIP_SHUTOFF"
 
         fun stop(ctx: Context) {
             try { ctx.stopService(Intent(ctx, OfenService::class.java)) } catch (e: Exception) { }

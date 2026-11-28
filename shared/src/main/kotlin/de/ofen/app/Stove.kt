@@ -53,6 +53,14 @@ object Stove {
         plat.saveConfig(c.toString())
     }
 
+    /** Zeitstempel für Schutzzeiten (eigener, dauerhafter Speicher, siehe Platform.timeLoad).
+     *  Liegt ein Wert in der Zukunft (Uhr zurückgestellt), zählt er als „jetzt“: lieber zu lange warten als zu früh zünden. */
+    private fun timeGet(k: String): Long = minOf(try { plat.timeLoad(k) } catch (e: Exception) { 0L }, System.currentTimeMillis())
+    private fun timeSet(k: String, v: Long) { try { plat.timeSave(k, v) } catch (e: Exception) { } }
+    /** ungekappt – für Zeitpunkte, die bewusst in der Zukunft liegen dürfen (z. B. „nächste Abschaltung auslassen“) */
+    private fun timeRaw(k: String): Long = try { plat.timeLoad(k) } catch (e: Exception) { 0L }
+    private fun timeDel(k: String) { try { plat.timeDel(k) } catch (e: Exception) { } }
+
     private fun need(): Triple<String, String, String> {
         val c = cfg()
         val ip = c.optString("ip"); val ser = c.optString("serial"); val pin = c.optString("pin")
@@ -237,6 +245,11 @@ object Stove {
         val act = Control.active() && !Recorder.observing()
         if (act) try { externalStopCheck(prevState, st) } catch (e: Exception) { }
         haltCheck(s, act)
+        try {
+            shutoffCheck(s, act)
+        } catch (e: Exception) {
+            s.optJSONObject("shutoff")?.put("msg", "Abschaltung fehlgeschlagen – neuer Versuch: ${e.message}")
+        }
         try { hopperCheck(s) } catch (e: Exception) { }
         if (!act) {
             try { passiveInfo(s) } catch (e: Exception) { }
@@ -606,7 +619,14 @@ object Stove {
     // ------------------------------------------------------------------ Raumsteuerung (Homematic IP)
     // Startet den Ofen, wenn der gewählte Raum 0,5 °C unter dem Ziel liegt, und stoppt ihn 0,5 °C darüber.
     // Schutz für Ofen und Zünder: mindestens 60 min Laufzeit, mindestens 30 min Pause.
-    class Thermo { var lastStart = 0L; var lastStop = 0L; var waitStartSent = 0L; var lastBoilerSet = 0L }
+    // Start-/Stoppzeitpunkte müssen einen Neustart der App überstehen, sonst beginnen Mindestpause und
+    // Mindestlaufzeit nach jedem Neustart (Android beendet die App, Handy-Neustart, Update) wieder bei null.
+    class Thermo {
+        var lastStart: Long get() = timeGet("th_last_start"); set(v) = timeSet("th_last_start", v)
+        var lastStop: Long get() = timeGet("th_last_stop"); set(v) = timeSet("th_last_stop", v)
+        var waitStartSent = 0L
+        var lastBoilerSet = 0L
+    }
     val thermo = Thermo()
     private const val TH_HYST = 0.5
     private const val TH_MIN_RUN = 60 * 60_000L
@@ -627,21 +647,34 @@ object Stove {
         try { set("boiler.temp", want.toString()); s.put("target_temp", want) } catch (e: Exception) { }
     }
 
-    /** Beim Zurückschalten auf den Ofen-Fühler: gemerkte Ofen-Zieltemperatur wiederherstellen */
-    fun restoreBoilerTarget(c: JSONObject) {
-        if (!c.has("hm_prev_boiler")) return
+    /** Beim Zurückschalten auf den Ofen-Fühler: gemerkte Ofen-Zieltemperatur wiederherstellen.
+     *  Der gemerkte Wert wird erst nach erfolgreichem Senden gelöscht; schlägt es fehl (Ofen nicht erreichbar),
+     *  versucht thermoCheck() es später erneut. Rückgabe: true = nichts mehr offen. */
+    fun restoreBoilerTarget(c: JSONObject): Boolean {
+        if (!c.has("hm_prev_boiler")) return true
         val prev = c.optInt("hm_prev_boiler")
-        c.remove("hm_prev_boiler")
-        try { set("boiler.temp", prev.toString()) } catch (e: Exception) { }
+        return try {
+            set("boiler.temp", prev.toString())
+            c.remove("hm_prev_boiler")
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     private fun thermoCheck(s: JSONObject) {
         val c = cfg()
         val info = JSONObject().put("enabled", c.optBoolean("hm_ctrl"))
         s.put("thermo", info)
-        if (!c.optBoolean("hm_ctrl")) return
-        if (!c.optBoolean("expert")) {   // Raumsteuerung startet den Ofen selbsttätig -> nur im Expertenmodus
-            if (c.has("hm_prev_boiler")) { restoreBoilerTarget(c); saveCfg(c) }
+        if (!c.optBoolean("hm_ctrl") || !c.optBoolean("expert")) {
+            // Raumsteuerung aus (oder ohne Expertenmodus nicht erlaubt): ein noch offenes Zurückstellen der
+            // Ofen-Zieltemperatur nachholen – höchstens einmal pro Minute versuchen
+            val now = System.currentTimeMillis()
+            if (c.has("hm_prev_boiler") && now - thermo.lastBoilerSet >= 60_000L) {
+                thermo.lastBoilerSet = now
+                if (restoreBoilerTarget(c)) saveCfg(c)
+            }
+            if (!c.optBoolean("hm_ctrl")) return
             info.put("enabled", false).put("msg", "nur im Expertenmodus"); return
         }
         if (c.optBoolean("halted")) { info.put("msg", "pausiert – Ofen ausgeschaltet"); return }
@@ -713,7 +746,7 @@ object Stove {
     private const val AP_MIN_GAP = 10 * 60_000L
     private val AP_PCT = mapOf(1 to "10", 2 to "50", 3 to "100")
     private val AP_NAME = mapOf(1 to "Niedrig", 2 to "Mittel", 3 to "Hoch")
-    @Volatile var apLastSet = 0L
+    var apLastSet: Long get() = timeGet("ap_last_set"); set(v) = timeSet("ap_last_set", v)
 
     fun autoPowerOn() = cfg().optBoolean("auto_power")
 
@@ -869,6 +902,123 @@ object Stove {
         val c = cfg()
         if (holder && c.optBoolean("hm_ctrl")) restoreBoilerTarget(c)
         c.remove("app_off"); c.put("app_on", false); saveCfg(c)
+    }
+
+    // ------------------------------------------------------------------ Abschaltzeit
+    // Schaltet den Ofen zur eingestellten Zeit aus – genau wie „Ausschalten“ (alle Automatiken pausiert, bis
+    // wieder „Ofen an“). Ist der Ofen zur Abschaltzeit nicht erreichbar, wird bis zu 60 min lang nachgeholt.
+    // Zeitlogik in Abschaltung.kt (mit Tests); hier nur Speichern, Ausführen und Melden.
+    // Ausgeführt wird nur auf dem Gerät mit der Steuerung (Raspi oder Handy).
+
+    fun shutoffPlan(c: JSONObject = cfg()): Abschaltung.Plan {
+        val o = c.optJSONObject("shutoff") ?: return Abschaltung.Plan()
+        val d = o.optJSONArray("days")
+        return Abschaltung.Plan(
+            mode = o.optString("mode", "off").takeIf { it in Abschaltung.MODES } ?: "off",
+            time = o.optString("time"),
+            date = o.optString("date"),
+            days = List(7) { d?.optString(it, "") ?: "" },
+            warn = o.optBoolean("warn", true),
+        )
+    }
+
+    private val zone get() = java.time.ZoneId.systemDefault()
+    private fun ms(t: java.time.LocalDateTime) = t.atZone(zone).toInstant().toEpochMilli()
+    private val SO_KEYS = listOf("shutoff_done", "shutoff_skip", "shutoff_warned")
+
+    /** Zeitstempel der Abschaltzeit für die Übergabe der Steuerung */
+    fun shutoffTimes(): JSONObject = JSONObject().also { o -> for (k in SO_KEYS) timeRaw(k).takeIf { it > 0 }?.let { o.put(k, it) } }
+
+    fun applyShutoffTimes(o: JSONObject) {
+        for (k in SO_KEYS) if (o.has(k)) timeSet(k, o.optLong(k)) else if (k != "shutoff_done") timeDel(k)
+    }
+
+    /** Für Oberfläche und Status: Modus, nächste Abschaltung, ausgelassen? */
+    fun shutoffInfo(): JSONObject {
+        val p = shutoffPlan()
+        val now = java.time.LocalDateTime.now(zone)
+        val info = JSONObject().put("mode", p.mode).put("warn", p.warn)
+        if (p.mode == "off") return info
+        val nx = Abschaltung.next(p, now)
+        if (nx == null) return info.put("msg", "keine weitere Abschaltung geplant")
+        val skipped = timeRaw("shutoff_skip") == ms(nx)
+        return info.put("next", ms(nx)).put("next_text", Abschaltung.label(nx, now)).put("skipped", skipped)
+    }
+
+    fun setShutoff(b: JSONObject): JSONObject {
+        val mode = b.optString("mode")
+        if (mode !in Abschaltung.MODES) throw StoveError("Unbekannter Modus")
+        val o = JSONObject().put("mode", mode).put("warn", b.optBoolean("warn", true))
+        val now = java.time.LocalDateTime.now(zone)
+        when (mode) {
+            "once", "daily" -> {
+                val tm = b.optString("time").trim()
+                if (Abschaltung.parseTime(tm) == null) throw StoveError("Bitte eine Uhrzeit wählen")
+                o.put("time", tm)
+                if (mode == "once") o.put("date", Abschaltung.onceDate(tm, now).toString())
+            }
+            "week" -> {
+                val arr = b.optJSONArray("days")
+                val days = List(7) { i ->
+                    val v = arr?.optString(i, "")?.trim() ?: ""
+                    if (v.isEmpty()) "" else v.takeIf { Abschaltung.parseTime(it) != null }
+                        ?: throw StoveError("Ungültige Uhrzeit")
+                }
+                if (days.all { it.isEmpty() }) throw StoveError("Bitte mindestens einen Tag wählen")
+                o.put("days", org.json.JSONArray(days))
+            }
+        }
+        val c = cfg(); c.put("shutoff", o); saveCfg(c)
+        // Nur Zeiten ab jetzt zählen – sonst ginge der Ofen sofort aus, wenn man um 22:10 „täglich 22:00“ einstellt
+        timeSet("shutoff_done", System.currentTimeMillis())
+        timeDel("shutoff_skip"); timeDel("shutoff_warned")
+        plat.clearAlert(Alerts.SHUTOFF)
+        return shutoffInfo()
+    }
+
+    /** Nächste Abschaltung auslassen (on = true) bzw. doch ausführen (on = false) */
+    fun shutoffSkip(on: Boolean): JSONObject {
+        val nx = Abschaltung.next(shutoffPlan(), java.time.LocalDateTime.now(zone))
+            ?: throw StoveError("Keine Abschaltung geplant")
+        if (on) timeSet("shutoff_skip", ms(nx)) else timeDel("shutoff_skip")
+        plat.clearAlert(Alerts.SHUTOFF)
+        return shutoffInfo()
+    }
+
+    @Synchronized
+    private fun shutoffCheck(s: JSONObject, act: Boolean) {
+        val p = shutoffPlan()
+        val now = java.time.LocalDateTime.now(zone)
+        // Noch nie etwas gespeichert (z. B. erste Version mit Abschaltzeit): nur Zeiten ab jetzt zählen
+        if (timeRaw("shutoff_done") <= 0L) timeSet("shutoff_done", System.currentTimeMillis())
+        if (act) {
+            val due = Abschaltung.due(p, now)
+            if (due != null && ms(due) > timeRaw("shutoff_done")) {
+                val dueMs = ms(due)
+                val hm = "%02d:%02d".format(due.hour, due.minute)
+                when {
+                    timeRaw("shutoff_skip") == dueMs -> timeSet("shutoff_done", dueMs)   // ausgelassen
+                    halted() -> timeSet("shutoff_done", dueMs)                            // ist schon aus
+                    else -> {
+                        halt()                               // wirft, wenn der Ofen nicht antwortet -> nächster Durchlauf versucht es erneut
+                        timeSet("shutoff_done", dueMs)
+                        s.put("halted", true).put("halted_at", System.currentTimeMillis())
+                        plat.clearAlert(Alerts.SHUTOFF)
+                        plat.notifyState("Ofen um $hm ausgeschaltet",
+                            "Abschaltzeit erreicht. Automatiken sind pausiert, bis du „Ofen an“ drückst.")
+                    }
+                }
+                if (p.mode == "once") { val c = cfg(); c.optJSONObject("shutoff")?.put("mode", "off"); saveCfg(c) }
+            }
+        }
+        s.put("shutoff", shutoffInfo())
+        if (!act) return
+        // Vorwarnung 15 min vorher, einmal je Abschaltzeit
+        val w = Abschaltung.warnFor(shutoffPlan(), now) ?: return
+        val wMs = ms(w)
+        if (halted() || timeRaw("shutoff_skip") == wMs || timeRaw("shutoff_warned") == wMs) return
+        timeSet("shutoff_warned", wMs)
+        plat.shutoffWarn("%02d:%02d".format(w.hour, w.minute))
     }
 
     /** „Funktionen starten“: erst danach spricht die App mit dem Ofen und die Überwachung läuft */

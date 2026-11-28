@@ -53,4 +53,6 @@ dependencies {
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
     // Texterkennung (z. B. „Password: …“ auf dem Typenschild), Modell kommt über die Play-Dienste
     implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
+    // Unit-Tests für reine Logik ohne Ofen (z. B. Abschaltzeit) – laufen im Build auf GitHub mit
+    testImplementation("junit:junit:4.13.2")
 }

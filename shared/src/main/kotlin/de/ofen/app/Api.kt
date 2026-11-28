@@ -44,7 +44,8 @@ object Api {
                 .put("bg_dim", c.optInt("bg_dim", 35)).put("card_alpha", c.optInt("card_alpha", 66))
                 .put("ip_changed_at", c.optLong("ip_changed_at")).put("ip_old", c.optString("ip_old"))
                 .put("expert", c.optBoolean("expert")).put("expert_ver", Stove.EXPERT_TEXT_VERSION)
-                .put("hm", Hmip.connected()).put("linked", Stove.platform.kind == "raspi" || Link.linked()))
+                .put("hm", Hmip.connected()).put("linked", Stove.platform.kind == "raspi" || Link.linked())
+                .put("shutoff", c.optJSONObject("shutoff") ?: JSONObject()).put("shutoff_info", Stove.shutoffInfo()))
         }
         "status" -> ok(Stove.readStatus().put("control", Control.info()))
         "control" -> ok(Control.info())
@@ -83,7 +84,7 @@ object Api {
     private val EXPERT_ONLY = setOf("pelletstop", "manual/switch", "manual/probe", "manual/name", "manual/names", "settings/read", "settings/write")
 
     /** Gerät ohne Steuerung: was die Automatiken betrifft, darf nur das steuernde Gerät ändern */
-    private val HOLDER_ONLY = setOf("expert", "manual/switch", "manual/probe", "manual/name", "manual/names", "pelletstop", "settings/write", "hm/disconnect", "hopper/config")
+    private val HOLDER_ONLY = setOf("expert", "manual/switch", "manual/probe", "manual/name", "manual/names", "pelletstop", "settings/write", "hm/disconnect", "hopper/config", "shutoff", "shutoff/skip")
 
     private fun handlePost(p: String, b: JSONObject): JSONObject {
         when (p) {
@@ -152,6 +153,8 @@ object Api {
             }
             "discover" -> return ok(Stove.discover())
             "setup" -> return ok(Stove.setup(b.optString("serial").trim(), b.optString("pin").trim()))
+            "shutoff" -> return ok(Stove.setShutoff(b))
+            "shutoff/skip" -> return ok(Stove.shutoffSkip(b.optBoolean("on")))
             "start" -> { Stove.resume(); return ok() }
             "stop" -> { Stove.halt(); return ok(JSONObject().put("halted", true)) }
             "power" -> {
@@ -166,7 +169,10 @@ object Api {
             "target" -> {
                 val t = b.optString("temp").toDoubleOrNull()?.toInt()
                 if (t == null || t !in 5..35) return err("Zieltemperatur 5–35 °C")
-                Stove.set("boiler.temp", t.toString()); return ok()
+                Stove.set("boiler.temp", t.toString())
+                // Von Hand gesetzt -> ein noch offenes Zurückstellen aus der Raumsteuerung darf das nicht überschreiben
+                Stove.cfg().let { if (!it.optBoolean("hm_ctrl") && it.has("hm_prev_boiler")) { it.remove("hm_prev_boiler"); Stove.saveCfg(it) } }
+                return ok()
             }
             "hopper/fill" -> {
                 val kg = b.optString("kg").toDoubleOrNull() ?: return err("Ungültige Menge")

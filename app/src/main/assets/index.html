@@ -246,7 +246,8 @@ body.noxp .xp{display:none!important}
 .duo.two .seg button{padding:7px 6px;font-size:14px}.seg button{padding:9px 6px}
 #pelletCard .step{margin-top:10px}#pelletCard .step button{width:44px;height:44px;flex:0 0 44px;font-size:22px}#pelletCard .step .v{font-size:28px}
 .hints{display:flex;gap:8px;margin:-4px 0 6px}.hint{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;font-weight:700;padding:7px 11px;border-radius:999px;background:color-mix(in srgb,var(--fire) 16%,var(--card));cursor:pointer}
-.hint[hidden]{display:none}.hint.cold{background:color-mix(in srgb,#3b82f6 22%,var(--card));flex:0 0 auto}
+.hint[hidden]{display:none}.hint.off{background:color-mix(in srgb,#8b5cf6 22%,var(--card));flex:0 0 auto}.hint.off.skip{opacity:.6;text-decoration:line-through}
+.sodays .tgl{margin-top:8px}.sodays input[type=time]{flex:0 0 120px;padding:8px}.sodays .tgl b{flex:1}#soOneBox[hidden],#soWeekBox[hidden],#soSet[hidden]{display:none}.hint.cold{background:color-mix(in srgb,#3b82f6 22%,var(--card));flex:0 0 auto}
 #upd{display:none}
 header .gear{margin-left:auto}header .gear.torch:not([hidden])+.gear{margin-left:10px}.gear[hidden]{display:none}
 .gear.torch.lit{background:#fde047;color:#78350f;box-shadow:0 0 0 3px rgba(253,224,71,.45),0 0 18px rgba(253,224,71,.6)}header .brand{font-size:23px}header .brand svg{width:30px;height:30px}
@@ -353,7 +354,7 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
   <div id="homeFan"></div>
   <div class="warn" id="vpnHome" hidden><b>Du bist im Heim-WLAN, aber das VPN ist noch an.</b> Die App spricht den Ofen dann über den Tunnel an statt direkt – das ist langsamer und störanfälliger. Am besten in WG Tunnel dein WLAN als vertrauenswürdig eintragen, dann geht das VPN zu Hause von selbst aus.
     <a class="btn" id="vpnHomeBtn" href="#" style="margin-top:10px">VPN-App öffnen</a></div>
-  <div class="hints" id="hints"><span class="hint" id="thHome" hidden onclick="tab('rooms')"></span><span class="hint" id="valveHome" hidden onclick="tab('set');openPage('hm')"></span></div>
+  <div class="hints" id="hints"><span class="hint" id="thHome" hidden onclick="tab('rooms')"></span><span class="hint" id="valveHome" hidden onclick="tab('set');openPage('hm')"></span><span class="hint off" id="soHome" hidden onclick="soSkipToggle()"></span></div>
   <p class="mute upd" id="upd"></p>
 </section>
 
@@ -506,6 +507,16 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
       <li>Läuft die <b>Homematic-Raumsteuerung</b>, startet sie den Ofen bei Bedarf.</li>
       <li>Sonst bleibt der Ofen aus, und du bekommst eine Benachrichtigung.</li></ul>
       <p>Das klappt nur, solange die App den Ofen überwacht (Funktionen an). Mit <b>Ofen aus</b> oder am Ofen ausgeschaltet startet nichts von selbst.</p></div></details>
+    <details id="h-shutoff"><summary>Abschaltzeit</summary><div>
+      <p>Die App schaltet den Ofen zu einer festen Uhrzeit aus – z. B. abends um 22 Uhr. Einstellen unter <b>Einstellungen → Abschaltzeit</b>.</p>
+      <ul><li><b>Aus</b>: keine Abschaltung.</li>
+      <li><b>Einmalig</b>: einmal zur Uhrzeit – heute, wenn sie noch kommt, sonst morgen.</li>
+      <li><b>Täglich</b>: jeden Tag zur selben Uhrzeit.</li>
+      <li><b>Wochentage</b>: je Tag Schalter an und eigene Uhrzeit; Tage mit Schalter aus werden nicht abgeschaltet.</li></ul>
+      <p>Dann <b>Speichern</b>. Es zählen nur Zeiten ab jetzt – ist 22:00 heute schon vorbei, geht der Ofen nicht sofort aus.</p>
+      <p><b>Was passiert:</b> wie „Ofen aus“. Der Ofen stoppt, die Startseite zeigt „Ausgeschaltet“, alle Automatiken pausieren. Erst <b>Ofen an</b> (App oder Ofen) startet ihn wieder. Brennt noch Holz, brennt es von selbst ab.</p>
+      <p><b>Vorwarnung:</b> 15 Minuten vorher kommt „Ofen geht um … aus“ mit dem Knopf <b>„Diesmal nicht abschalten“</b>. Auf der Startseite steht vorher „Aus um 22:00“ – antippen lässt genau diese eine Abschaltung aus, nochmal antippen macht sie wieder aktiv.</p>
+      <p><b>Wichtig:</b> Klappt nur, solange die Überwachung läuft (Funktionen an bzw. gekoppelter Raspi) und den Ofen erreicht. Ist der Ofen nicht erreichbar, wird es bis zu 60 Minuten lang versucht, danach nicht mehr.</p></div></details>
     <details id="h-hm"><summary>Homematic IP (optional)</summary><div>
       <ol><li><b>Einstellungen → Homematic IP</b>: Access-Point-ID (SGTIN, Aufkleber auf dem Access Point) eintragen oder scannen. PIN nur, wenn du in der Homematic-App eine festgelegt hast.</li>
       <li><b>Verbinden</b> tippen und innerhalb von 3 Minuten die <b>blaue Taste am Access Point</b> drücken.</li></ol>
@@ -542,6 +553,7 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
       <ul><li><b>Ofen antwortet nicht</b>: Handy im Heim-WLAN? Ofen eingeschaltet und im WLAN? Unter Ofen &amp; Verbindung „Ofen im WLAN suchen“.</li>
       <li><b>Falsches Passwort</b>: PIN = „Password“ vom NBE-Aufkleber, nicht das WLAN-Passwort.</li>
       <li><b>Keine Warnungen bei geschlossener App</b>: Akku-Optimierung und Benachrichtigungen prüfen (siehe Hintergrund &amp; Benachrichtigungen).</li>
+      <li><b>Ofen ging zu einer festen Zeit aus</b>: Ist eine Abschaltzeit eingestellt (siehe Abschaltzeit)? Mit <b>Ofen an</b> wieder einschalten.</li>
       <li><b>Homematic verbindet nicht</b>: blaue Taste am Access Point innerhalb von 3 Minuten drücken; Access-Point-ID genau prüfen.</li>
       <li><b>Installation blockiert</b>: „Dieser Quelle vertrauen“ erlauben; bei Play Protect „Weitere Details → Trotzdem installieren“.</li>
       <li><b>Samsung blockiert die Installation</b>: Einstellungen → <b>Sicherheit und Datenschutz → Automatische Sperre</b> ausschalten, App installieren, danach wieder einschalten.</li>
@@ -554,6 +566,20 @@ body.hasbg .ctlbar{background:color-mix(in srgb,var(--card) var(--cardA,66%),tra
     <div class="row"><button class="fire" onclick="bgPick()">Foto wählen</button><button id="bgDel" onclick="bgClear()">Entfernen</button></div>
     <div id="bgSl"><label>Bild abdunkeln</label><div class="slide"><input type="range" id="bgDimR" min="0" max="80" step="5"><b id="bgDimV">–</b></div>
     <label>Deckkraft der Karten</label><div class="slide"><input type="range" id="cardAR" min="30" max="100" step="5"><b id="cardAV">–</b></div></div>
+  </div>
+  <div class="card" data-pg="off">
+    <h2>Abschaltzeit</h2>
+    <p class="mute" style="margin-top:0">Schaltet den Ofen zur eingestellten Zeit aus – genau wie „Ofen aus“: Raumsteuerung und alle anderen Automatiken pausieren, bis du wieder „Ofen an“ drückst (in der App oder am Ofen).</p>
+    <div class="seg" id="soMode"><button data-m="off">Aus</button><button data-m="once">Einmalig</button><button data-m="daily">Täglich</button><button data-m="week">Wochentage</button></div>
+    <div id="soSet">
+      <div id="soOneBox"><label>Uhrzeit</label><input type="time" id="soTime" value="22:00"></div>
+      <div id="soWeekBox" class="sodays"></div>
+      <div class="tgl" style="margin-top:14px"><div><b>15 Minuten vorher warnen</b><span class="mute">Benachrichtigung mit Knopf „Diesmal nicht abschalten“.</span></div>
+        <label class="sw"><input type="checkbox" id="soWarn" checked><i></i></label></div>
+    </div>
+    <button class="fire" style="width:100%;margin-top:16px" onclick="soSave()">Speichern</button>
+    <p class="mute" id="soNext" style="margin-bottom:0"></p>
+    <div class="warn" style="margin-top:12px">Funktioniert nur, solange die Überwachung läuft (Funktionen an bzw. Raspi) und den Ofen erreicht. Ist der Ofen zur Abschaltzeit nicht erreichbar, wird es bis zu 60 Minuten lang versucht – danach nicht mehr. Brennt noch Holz, brennt es von selbst ab.</div>
   </div>
   <div class="card" id="bgCard" data-pg="bg">
     <h2>Hintergrund-Überwachung</h2>
@@ -894,7 +920,7 @@ function render(s){
  const lv={'10':1,'50':2,'100':3}[String(s.fixed_power)];document.querySelectorAll('#lv button').forEach(b=>b.classList.toggle('sel',+b.dataset.l===lv));
  apRender(s);
  ctlRender(s);
- renderRooms(s);renderParts(s);renderHop(s);
+ renderRooms(s);renderParts(s);renderHop(s);renderSo(s);
  $('upd').textContent='Aktualisiert '+new Date().toLocaleTimeString('de-DE');
  $('m1b').classList.toggle('tap',!!metaAct(1));$('m2b').classList.toggle('tap',!!metaAct(2));
 }
@@ -1081,6 +1107,23 @@ let lookT=0;['bgDimR','cardAR'].forEach(id=>$(id).addEventListener('input',()=>{
 window.__bgSet=(u,err)=>{if(err){toast(err,true);return}applyBg(u);toast('Foto übernommen')};
 try{applyBg(Ofen.backgroundPhoto())}catch(e){}
 
+/* Abschaltzeit */
+const SO_WD=['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];let SO_MODE='off',SO_INFO={};
+function soMode(m){SO_MODE=m;$('soMode').querySelectorAll('button').forEach(b=>b.classList.toggle('sel',b.dataset.m===m));
+ $('soSet').hidden=m==='off';$('soOneBox').hidden=!(m==='once'||m==='daily');$('soWeekBox').hidden=m!=='week'}
+$('soMode').querySelectorAll('button').forEach(b=>b.onclick=()=>soMode(b.dataset.m));
+function soNextText(i){SO_INFO=i||{};$('soNext').textContent=!i||i.mode==='off'?'Keine Abschaltung eingestellt.':i.next_text?'Nächste Abschaltung: '+i.next_text+(i.skipped?' – wird ausgelassen':''):'Keine weitere Abschaltung geplant.'}
+function soLoad(){const o=CFG.shutoff||{},d=o.days||[];
+ $('soWeekBox').innerHTML=SO_WD.map((n,i)=>`<div class="tgl"><label class="sw sm"><input type="checkbox" id="soD${i}"${d[i]?' checked':''}><i></i></label><b>${n}</b><input type="time" id="soT${i}" value="${esc(d[i]||'22:00')}"></div>`).join('');
+ if(o.time)$('soTime').value=o.time;$('soWarn').checked=o.warn!==false;soMode(o.mode||'off');soNextText(CFG.shutoff_info)}
+function soSave(){const b={mode:SO_MODE,warn:$('soWarn').checked,time:$('soTime').value,days:SO_WD.map((_,i)=>$('soD'+i).checked?$('soT'+i).value:'')};
+ api('shutoff',b).then(i=>{CFG.shutoff={...b};CFG.shutoff_info=i;soNextText(i);toast(SO_MODE==='off'?'Abschaltzeit aus':'Gespeichert – '+(i.next_text?'nächste: '+i.next_text:'keine weitere geplant'));loadCfg()}).catch(e=>toast(e.message,true))}
+function renderSo(s){const i=s.shutoff||{},h=$('soHome');SO_INFO=i;
+ if(i.next_text&&!s.halted){h.hidden=false;h.textContent=i.next_text.startsWith('heute ')?'Aus um '+i.next_text.slice(6):'Aus '+i.next_text;h.classList.toggle('skip',!!i.skipped)}else h.hidden=true}
+function soSkipToggle(){const i=SO_INFO;if(!i.next_text)return;
+ const on=!i.skipped;if(!confirm(on?'Abschaltung '+i.next_text+' auslassen?':'Abschaltung '+i.next_text+' doch ausführen?'))return;
+ run(()=>api('shutoff/skip',{on}),on?'Abschaltung '+i.next_text+' ausgelassen':'Abschaltung '+i.next_text+' wieder aktiv')}
+
 /* Homematic IP */
 const ICO_ROOM='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/></svg>';
 const ICO_FIRE='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 3.5 5.5 5.6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.6 1.3-4.3 2.6-5.6.3 1.7 1 2.8 2.2 3.3C10.9 7.7 11.4 4.6 12 2z"/></svg>';
@@ -1147,6 +1190,7 @@ const SVG=p=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
 const PAGES=[
  {id:'conn',t:'Ofen & Verbindung',c:'linear-gradient(135deg,#3b82f6,#06b6d4)',i:SVG('<path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5.5 12.2a10 10 0 0 1 13 0"/><path d="M9 15.8a5 5 0 0 1 6 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/>')},
  {id:'link',t:'Raspi & Handys',c:'linear-gradient(135deg,#6366f1,#22c7e8)',i:SVG('<path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>')},
+ {id:'off',t:'Abschaltzeit',c:'linear-gradient(135deg,#8b5cf6,#3b82f6)',i:SVG('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/><path d="M9 2h6"/>')},
  {id:'pellet',t:'Pellets & Holz',c:'linear-gradient(135deg,#ff8a3d,#ff4f6d)',i:SVG('<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.4 1.2-4 2.4-5.2.3 1.5 1 2.5 2 3C11 8 11.5 5.3 12 3z"/>')},
  {id:'hm',t:'Homematic IP',c:'linear-gradient(135deg,#22c55e,#0fb5a6)',i:SVG('<path d="M14 14.8V4a2 2 0 0 0-4 0v10.8a4 4 0 1 0 4 0z"/>')},
  {id:'xpm',t:'Expertenmodus',c:'linear-gradient(135deg,#f59e0b,#ef4444)',i:SVG('<path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5"/><circle cx="12" cy="18" r=".8" fill="currentColor"/>')},
@@ -1163,6 +1207,7 @@ function menuSub(id){try{
  if(id==='hm')return HM&&HM.connected?('verbunden'+(HM.ctrl?' · Raumsteuerung an':'')+(HM.valve?' · Heizkörper-Steuerung an':'')):'nicht verbunden';
  if(id==='outs'){const n=Object.keys(man.names||{}).length;return n?n+' benannt'+(man.fresh_air_bit!=null?' · Frischluftgebläse':''):'noch nicht eingerichtet – Assistent oder Vorlage'}
  if(id==='bg'){const b=JSON.parse(Ofen.bgInfo());return (b.notif_ok?(CFG.notify_state!==false?'Benachrichtigungen + Zustände':'Benachrichtigungen an'):'Benachrichtigungen aus')+' · Akku-Optimierung '+(b.battery_ok?'aus':'an')}
+ if(id==='off'){const i=CFG.shutoff_info||{};return i.mode&&i.mode!=='off'?(i.next_text?'nächste: '+i.next_text+(i.skipped?' (ausgelassen)':''):'keine weitere geplant'):'aus'}
  if(id==='expert')return 'Jeden Wert einzeln lesen und ändern';
  if(id==='help')return 'Einrichtung, Bedienung, Sicherheit';
  if(id==='link'){if(!linkedUI())return 'optional – Wandgerät mit Touchscreen';const t=ctlText(CTL);return t?t[0]:''}
@@ -1177,7 +1222,7 @@ function buildMenu(){$('setMenu').innerHTML=pageList().map(p=>`<div class="mi" d
 function openPage(id,dir){setPage=id;const P=PAGES.find(p=>p.id===id);
  $('setTitle').textContent=P?P.t:'Einstellungen';$('setMenu').hidden=!!id;$('setHelp').hidden=!id||id==='help'||!HELP_FOR[id];
  document.querySelectorAll('#t-set [data-pg]').forEach(c=>c.hidden=c.dataset.pg!==id);
- if(id==='pellet'){loadPstop();hopCfgLoad()}if(id==='bg'){bgRefresh();loadCfg()}if(id==='hm')hmLoad();if(id==='link')lkLoad();
+ if(id==='pellet'){loadPstop();hopCfgLoad()}if(id==='bg'){bgRefresh();loadCfg()}if(id==='hm')hmLoad();if(id==='off')soLoad();if(id==='link')lkLoad();
  if(!id){loadCfg().then(buildMenu);if(HM===null)hmLoad().then(buildMenu)}
  const sec=$('t-set');sec.classList.remove('inL','inR');void sec.offsetWidth;sec.classList.add((dir??1)>0?'inL':'inR');window.scrollTo(0,0)}
 /* Funktionen starten / beenden (beenden = bisheriges „App beenden“) */
@@ -1197,7 +1242,7 @@ function torchToggle(){let r='';try{r=Ofen.torch()}catch(e){}
 window.onTorch=on=>$('torchBtn').classList.toggle('lit',!!on);
 try{if(!WEB&&Ofen.hasTorch())$('torchBtn').hidden=false}catch(e){}
 /* Anleitung */
-const HELP_FOR={conn:'h-start',link:'h-link',pellet:'h-pellet',hm:'h-hm',xpm:'h-xpm',outs:'h-xpm',expert:'h-xpm',bg:'h-bg',look:'h-home'};
+const HELP_FOR={conn:'h-start',off:'h-shutoff',link:'h-link',pellet:'h-pellet',hm:'h-hm',xpm:'h-xpm',outs:'h-xpm',expert:'h-xpm',bg:'h-bg',look:'h-home'};
 function helpFor(page){help(HELP_FOR[page]||'h-start')}
 function help(sec){tab('set');openPage('help');const d=$(sec);if(!d)return;
  document.querySelectorAll('.help details').forEach(x=>x.open=x===d);

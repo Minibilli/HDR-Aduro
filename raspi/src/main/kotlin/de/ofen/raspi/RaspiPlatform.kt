@@ -45,6 +45,18 @@ class RaspiPlatform(private val dir: File) : Platform {
             .any { it.hostAddress.split(".").take(3) == pre }
     }
 
+    // Zeitstempel (Schutzzeiten, Abschaltzeit) in eigener Datei
+    private val timesFile = File(dir, "zeiten.json")
+    private fun timesRead(): org.json.JSONObject = try { org.json.JSONObject(if (timesFile.exists()) timesFile.readText() else "{}") } catch (e: Exception) { org.json.JSONObject() }
+    private fun timesWrite(o: org.json.JSONObject) {
+        val tmp = File(dir, "zeiten.json.tmp"); tmp.writeText(o.toString())
+        try { Files.move(tmp.toPath(), timesFile.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE) }
+        catch (e: Exception) { Files.move(tmp.toPath(), timesFile.toPath(), StandardCopyOption.REPLACE_EXISTING) }
+    }
+    @Synchronized override fun timeLoad(k: String): Long = timesRead().optLong(k, 0L)
+    @Synchronized override fun timeSave(k: String, v: Long) { timesWrite(timesRead().put(k, v)) }
+    @Synchronized override fun timeDel(k: String) { val o = timesRead(); if (o.has(k)) { o.remove(k); timesWrite(o) } }
+
     override fun notifyState(title: String, text: String) {
         log("$title – $text")
         Control.event("state", title, text)
